@@ -182,7 +182,7 @@ The `move_self` version again requires the variable to be re-bound in each state
 ---
 
 Template gist: https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101
-Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ca6d3d3de6b3ef455643b63aeeb4de93
+Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9
 
 Results for `chain_move`:
 
