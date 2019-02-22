@@ -4,8 +4,6 @@ title: "Returning Self Considered An Anti-Pattern"
 categories: rust
 ---
 
-# Returning `Self` Considered ~~Harmful~~ An Anti-Pattern
-
 It's a common pattern in the Rust ecosystem to have a function return some variation of `Self` (either `Self`, `&Self`, or `&mut Self`) in order to enable method chaining. For example:
 
 ```rust
@@ -29,7 +27,7 @@ This pattern is often found in combination with the [builder pattern], where you
 
 While method chaining is often desirable as a concise way to perform a series of operations, returning `Self` interacts poorly with Rust's ownership system.
 
-## Use Cases
+# Use Cases
 
 If you're writing a crate that provides a builder struct, you'll want to design your API so that it can support all of the following use cases:
 
@@ -81,7 +79,7 @@ foo.chain()
 To demonstrate this, we're going to work with the following definitions:
 
 ```rust
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Foo;
 
 impl Foo {
@@ -103,7 +101,7 @@ This allows us to compare the two primary ways that people implement method chai
 
 Let's now take a look at each of the use cases we would like to support, and see how they work with each of the method chaining approaches.
 
-### Single Method Chain
+## Single Method Chain
 
 The most basic case is having a single long method chain, from construction into the consumtion of your type.
 
@@ -116,6 +114,8 @@ consume_ref(Foo::default().chain_ref().chain_ref());
 ```
 
 For both the ref and move versions, a single large chain works as expected, and you can pass the output directly into the consuming function.
+
+## Use Before Consuming
 
 The ref version doesn't work quite as well if you need to bind the chained value to a varible before consuming it, though. Let's say you needed to log the value of `Foo` before consuming it:
 
@@ -146,14 +146,56 @@ println!("foo: {:?}", foo);
 consume_ref(&foo);
 ```
 
-While this works, it's less ergonomic and somewhat undermines one of the major advantages of method chaining (i.e. being able to create, modify, and assign the value in a single statement).
+While this works, it's less ergonomic and somewhat undermines one of the major advantages of method chaining (i.e. being able to create, modify, and assign the value in a single statement). For my purposes, I consider this "not working" with regards to method chaining.
+
+## Modifying a Bound Value
+
+Is it possible to modify an existing, mutable value via method chaining? It's possible with the `chain_ref` variant:
+
+```rust
+let mut foo = Foo::default();
+foo.chain_ref().chain_ref().chain_ref();
+consume_ref(&foo);
+consume_move(foo);
+```
+
+The `chain_move` version requires that you rebind the variable, though, which I consider to be an ergonomic failure:
+
+```rust
+let foo = Foo::default();
+let foo = foo.chain_move().chain_move().chain_move();
+```
+
+Note that if you have a `&mut Foo`, the `chain_move` version doesn't work at all, and you'll be left with no way to modify the value.
+
+On a similar note, the `move_ref` version can also be used to modify the value without chaining, e.g.:
+
+```rust
+let mut foo = Foo::default();
+foo.chain_ref();
+foo.chain_ref();
+foo.chain_ref();
+```
+
+The `move_self` version again requires the variable to be re-bound in each statement, and cannot be used if you only have access to a `&mut Foo`.
 
 ---
 
 Template gist: https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101
+Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ca6d3d3de6b3ef455643b63aeeb4de93
 
-{% rp_highlight rust %}
-fn main() {
-  println!("{}", "Rust Is Memory Safe!"};
-}
-{% endrp_highlight %}
+Results for `chain_move`:
+
+|                    | `consume_move` | `consume_ref` |
+|--------------------|----------------|---------------|
+| Single chain       | yes            | yes           |
+| Use before consume | yes            | yes           |
+| Modify bound value | no             | no            |
+
+Results for `chain_ref`:
+
+|                    | `consume_move` | `consume_ref` |
+|--------------------|----------------|---------------|
+| Single chain       | no             | yes           |
+| Use before consume | no             | no            |
+| Modify bound value | yes            | yes           |
