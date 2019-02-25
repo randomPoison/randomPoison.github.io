@@ -39,111 +39,66 @@ While method chaining is often desirable as a concise way to perform a series of
 
 While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modyfing an object in a single statement), there are oftem more complex use cases that don't work nearly as well.
 
-If your struct `Foo` defines a method `chain()` intended to be used in method chaining, here are some different ways a user may want to use it:
-
-Performing the method chain in a single expression:
-
-```rust
-let foo = Foo::default()
-    .chain()
-    .chain()
-    .chain()
-    .chain();
-```
-
-Splitting up the method chain with re-assignment:
-
-```rust
-let foo = Foo::default()
-    .chain()
-    .chain();
-
-let foo = foo
-    .chain()
-    .chain();
-```
-
-Splitting up the method chain without re-assigment:
-
-```rust
-let mut foo = Foo::default()
-    .chain()
-    .chain();
-
-foo
-    .chain()
-    .chain();
-```
-
-Calling chain functions individually:
-
-```rust
-let mut foo = Foo::default();
-foo.chain();
-foo.chain();
-foo.chain();
-```
-
-Neither returning `Self` or `&mut Self` supports all of these cases: Returning `Self` means that you can't call the `chain` function on its own without re-assigning the variable (i.e. you have to do `let foo = foo.chain()`); Returning `&mut Self` means that you can't split up the chain without also splitting off the intial creation of the object, e.g.
-
-```rust
-// First you have to create the initial `Foo`.
-let mut foo = Foo::default();
-
-// Then you can do the first bit of method chaining.
-foo.chain()
-    .chain();
-
-// Now you can do more chaining.
-foo
-    .chain()
-    .chain();
-```
-
----
-
 To demonstrate this, we're going to work with the following definitions:
 
 ```rust
 #[derive(Debug, Default)]
-struct Foo;
+struct Foo {
+    value: usize,
+}
 
 impl Foo {
-    fn chain_move(self) -> Self {
+    fn chain_move(mut self) -> Self {
+        self.value += 1;
         self
     }
 
     fn chain_ref(&mut self) -> &mut Self {
+        self.value += 1;
         self
     }
 }
 
-fn consume_move(_foo: Foo) {}
+fn consume_move(foo: Foo) {
+    println!("{:?}", foo);
+}
 
-fn consume_ref(_foo: &Foo) {}
+fn consume_ref(foo: &Foo) {
+    println!("{:?}", foo);
+}
 ```
 
-This allows us to compare the two primary ways that people implement method chaining: Returning `Self`, and returning `&mut Self`.
+This allows us to compare the two primary ways that people implement method chaining: Returning `Self`, and returning `&mut Self`. We also look at two ways of consuming the value: By ref and by value. As we'll see, the way the final object will be consumed often interacts differently with the different chaining methods.
 
 Let's now take a look at each of the use cases we would like to support, and see how they work with each of the method chaining approaches.
 
 ## Single Method Chain
 
-The most basic case is having a single long method chain, from construction into the consumtion of your type.
+The most basic case is having a single long method chain, from construction into the consumtion of your type:
 
 ```rust
 consume_move(Foo::default().chain_move().chain_move());
-```
-
-```rust
 consume_ref(Foo::default().chain_ref().chain_ref());
 ```
 
-For both the ref and move versions, a single large chain works as expected, and you can pass the output directly into the consuming function.
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=9402739e03bf725420ad70a0283ac943)
+
+For both the ref and move versions, a single large chain works as expected, and you can pass the output directly into the consuming function. Note, though, that while the `chain_move` version works with both `consume_move` and `consume_ref` version, `chain_ref` can only be used with `consume_ref`. If we try to pass the result of `chain_ref` into `consume_move`, we get this error:
+
+```txt
+error[E0308]: mismatched types
+ --> src/main.rs:9:18
+  |
+9 |     consume_move(Foo::default().chain_ref().chain_ref()); // Doesn't compile.
+  |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected struct `Foo`, found &mut Foo
+  |
+  = note: expected type `Foo`
+             found type `&mut Foo`
+```
 
 ## Use Before Consuming
 
-The ref version doesn't work quite as well if you need to bind the chained value to a varible before consuming it, though. Let's say you needed to log the value of `Foo` before consuming it:
+Let's say you needed to log the value of `Foo` before consuming it. This works fine with the `chain_move`:
 
 ```rust
 let foo = Foo::Default().chain_move().chain_move();
@@ -151,13 +106,13 @@ println!("foo: {:?}", foo);
 consume_move(foo);
 ```
 
+But doing the same thing with `chain_ref` won't compile:
+
 ```rust
 let foo = Foo::default().chain_ref().chain_ref();
 println!("foo: {:?}", foo);
 consume_ref(foo);
 ```
-
-This won't compile:
 
 ```txt
 TODO: Error goes here.
