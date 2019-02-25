@@ -101,10 +101,13 @@ error[E0308]: mismatched types
 Let's say you needed to log the value of `Foo` before consuming it. This works fine with the `chain_move`:
 
 ```rust
-let foo = Foo::Default().chain_move().chain_move();
+let foo = Foo::default().chain_move().chain_move();
 println!("foo: {:?}", foo);
+consume_ref(&foo);
 consume_move(foo);
 ```
+
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e699bb33a981efcfbad73ea7d402780c)
 
 But doing the same thing with `chain_ref` won't compile:
 
@@ -115,30 +118,56 @@ consume_ref(foo);
 ```
 
 ```txt
-TODO: Error goes here.
+error[E0716]: temporary value dropped while borrowed
+ --> src/main.rs:2:15
+  |
+2 |     let foo = Foo::default().chain_ref().chain_ref();
+  |               ^^^^^^^^^^^^^^                        - temporary value is freed at the end of this statement
+  |               |
+  |               creates a temporary which is freed while still in use
+3 |     println!("foo: {:?}", foo);
+  |                           --- borrow later used here
+  |
+  = note: consider using a `let` binding to create a longer lived value
 ```
 
-You instead need to assign the initially constructed `Foo` to a variable, then perform the method chaining:
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=fcf0b2d4b3422d5151fde27df66637ae)
+
+As the compiler helpfully notes, the temporary value created by `Foo::default()` is dropped at the end of the chain expression, so we can't bind it to a variable. Instead, we have to split binding the variable and performing the method chain into separate expressions:
 
 ```rust
 let mut foo = Foo::default();
 foo.chain_ref().chain_ref();
 println!("foo: {:?}", foo);
 consume_ref(&foo);
+consume_move(foo);
 ```
 
-While this works, it's less ergonomic and somewhat undermines one of the major advantages of method chaining (i.e. being able to create, modify, and assign the value in a single statement). For my purposes, I consider this "not working" with regards to method chaining.
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=32c6185fc4ffd64aec0f2e77d0f6de41)
+
+While this is functional, it's worth noting that it has a few drawbacks as compared to the `chain_move` version:
+
+* You can no longer create and modify the value in a single expression.
+* You have to bind `foo` as a mutable variable, which loosens some of the guarantees you get in the `chain_move` version when binding the variable immutably.
+* When converting from the single chain version to this version, it's easy to initially apply the naive transformation shown above and get tripped up when it doesn't work. The `chain_move` version, on the other hand, works fine with the naive transformation.
+
+For this case, both `chain_ref` and `chain_move` work equally well with `consume_ref` and `consume_move` since, once the object is bound to a variable, it is easy to either lend that value to another function or to transfer ownership entirely.
 
 ## Modifying a Bound Value
 
-Is it possible to modify an existing, mutable value via method chaining? It's possible with the `chain_ref` variant:
+Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the inital chain of modifications):
 
 ```rust
 let mut foo = Foo::default();
 foo.chain_ref().chain_ref().chain_ref();
+if some_condition {
+    foo.chain_ref().chain_ref().chain_ref();
+}
 consume_ref(&foo);
 consume_move(foo);
 ```
+
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=80f4b820c323958a1a39c5bd0ae3e3ac)
 
 The `chain_move` version requires that you rebind the variable, though, which I consider to be an ergonomic failure:
 
