@@ -16,20 +16,30 @@ impl Foo {
     }
 }
 
-let foo = Foo::default()
-    .chain()
-    .chain()
-    .chain()
-    .chain();
+fn consume(foo: Foo) {}
+
+// Create, modify, and consume a `Foo` in a single expression.
+// So concise! Such ergonomic! Wow!
+consume(
+    Foo::default()
+        .chain()
+        .chain()
+        .chain()
+        .chain()
+);
 ```
+
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=474c0928fe2620c4a889378f46558336)
 
 This pattern is often found in combination with the [builder pattern], where you have a struct containing a number of optionally-configurable values, enabling the user to concisely set only the options they care about.
 
 While method chaining is often desirable as a concise way to perform a series of operations, returning `Self` interacts poorly with Rust's ownership system.
 
-# Use Cases
+# Why Returning `Self` Doesn't Work Well
 
-If you're writing a crate that provides a builder struct, you'll want to design your API so that it can support all of the following use cases:
+While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modyfing an object in a single statement), there are oftem more complex use cases that don't work nearly as well.
+
+If your struct `Foo` defines a method `chain()` intended to be used in method chaining, here are some different ways a user may want to use it:
 
 Performing the method chain in a single expression:
 
@@ -71,7 +81,23 @@ Calling chain functions individually:
 let mut foo = Foo::default();
 foo.chain();
 foo.chain();
+foo.chain();
+```
+
+Neither returning `Self` or `&mut Self` supports all of these cases: Returning `Self` means that you can't call the `chain` function on its own without re-assigning the variable (i.e. you have to do `let foo = foo.chain()`); Returning `&mut Self` means that you can't split up the chain without also splitting off the intial creation of the object, e.g.
+
+```rust
+// First you have to create the initial `Foo`.
+let mut foo = Foo::default();
+
+// Then you can do the first bit of method chaining.
 foo.chain()
+    .chain();
+
+// Now you can do more chaining.
+foo
+    .chain()
+    .chain();
 ```
 
 ---
@@ -133,7 +159,7 @@ consume_ref(foo);
 
 This won't compile:
 
-```
+```txt
 TODO: Error goes here.
 ```
 
@@ -199,3 +225,5 @@ Results for `chain_ref`:
 | Single chain       | no             | yes           |
 | Use before consume | no             | no            |
 | Modify bound value | yes            | yes           |
+
+[builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
