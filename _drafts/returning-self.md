@@ -107,7 +107,7 @@ consume_ref(&foo);
 consume_move(foo);
 ```
 
-> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e699bb33a981efcfbad73ea7d402780c)
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=c3dad670cc24c7d710fc2cc4278c691c)
 
 But doing the same thing with `chain_ref` won't compile:
 
@@ -143,7 +143,7 @@ consume_ref(&foo);
 consume_move(foo);
 ```
 
-> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=32c6185fc4ffd64aec0f2e77d0f6de41)
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=234824151a664395c788cac897c49a9e)
 
 While this is functional, it's worth noting that it has a few drawbacks as compared to the `chain_move` version:
 
