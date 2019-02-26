@@ -35,7 +35,8 @@ This pattern is often found in combination with the [builder pattern], where you
 
 While method chaining is often desirable as a concise way to perform a series of operations, returning `Self` interacts poorly with Rust's ownership system.
 
-# Why Returning `Self` Doesn't Work Well
+Why Returning `Self` Doesn't Work Well
+======================================
 
 While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modyfing an object in a single statement), there are oftem more complex use cases that don't work nearly as well.
 
@@ -72,7 +73,8 @@ This allows us to compare the two primary ways that people implement method chai
 
 Let's now take a look at each of the use cases we would like to support, and see how they work with each of the method chaining approaches.
 
-## Single Method Chain
+Single Method Chain
+-------------------
 
 The most basic case is having a single long method chain, from construction into the consumtion of your type:
 
@@ -96,7 +98,8 @@ error[E0308]: mismatched types
              found type `&mut Foo`
 ```
 
-## Use Before Consuming
+Use Before Consuming
+--------------------
 
 Let's say you needed to log the value of `Foo` before consuming it. This works fine with the `chain_move`:
 
@@ -153,7 +156,8 @@ While this is functional, it's worth noting that it has a few drawbacks as compa
 
 For this case, both `chain_ref` and `chain_move` work equally well with `consume_ref` and `consume_move` since, once the object is bound to a variable, it is easy to either lend that value to another function or to transfer ownership entirely.
 
-## Modifying a Bound Value
+Modifying a Bound Value
+-----------------------
 
 Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the inital chain of modifications):
 
@@ -189,10 +193,8 @@ foo.chain_ref();
 
 The `move_self` version again requires the variable to be re-bound in each statement, and cannot be used if you only have access to a `&mut Foo`.
 
----
-
-Template gist: https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101
-Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9
+Results Summary
+---------------
 
 Results for `chain_move`:
 
@@ -209,5 +211,17 @@ Results for `chain_ref`:
 | Single chain       | no             | yes           |
 | Use before consume | no             | no            |
 | Modify bound value | yes            | yes           |
+
+Conclusions
+===========
+
+
+
+---
+
+Template gist: https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101
+
+Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9
+
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
