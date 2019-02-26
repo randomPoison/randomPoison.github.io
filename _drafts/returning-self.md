@@ -156,10 +156,19 @@ While this is functional, it's worth noting that it has a few drawbacks as compa
 
 For this case, both `chain_ref` and `chain_move` work equally well with `consume_ref` and `consume_move` since, once the object is bound to a variable, it is easy to either lend that value to another function or to transfer ownership entirely.
 
-Modifying a Bound Value
+Summary:
+
+|              | `consume_move`              | `consume_ref`|
+|--------------|-----------------------------|--------------|
+| `chain_move` | yes                         | yes          |
+| `chain_ref`  | yes, with separate variable | yes          |
+
+Modifying an Owned Value
 -----------------------
 
-Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the inital chain of modifications):
+Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. This means that we already have a bound, mutable variable that we would like to modify in the same method-chaining style that we use to crate the object.
+
+In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the inital chain of modifications):
 
 ```rust
 let mut foo = Foo::default();
@@ -192,6 +201,11 @@ foo.chain_ref();
 ```
 
 The `move_self` version again requires the variable to be re-bound in each statement, and cannot be used if you only have access to a `&mut Foo`.
+
+Modifying a Borrowed Value
+--------------------------
+
+> TODO: Demonstrate what it looks like to apply method chaining to a `&mut Foo`.
 
 Results Summary
 ---------------
