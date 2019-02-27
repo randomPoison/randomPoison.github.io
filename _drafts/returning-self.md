@@ -4,7 +4,9 @@ title: "Returning Self Considered An Anti-Pattern"
 categories: rust
 ---
 
-It's a common pattern in the Rust ecosystem to have a function return some variation of `Self` (either `Self`, `&Self`, or `&mut Self`) in order to enable method chaining. For example:
+<!-- markdownlint-disable MD002 -->
+
+It's a common pattern in the Rust ecosystem to have a function return some variation of `Self` (either `Self`, `&Self`, or `&mut Self`) i<!-- markdownlint-disable MD037 -->n order to enable method chaining. For example:
 
 ```rust
 #[derive(Default)]
@@ -32,11 +34,6 @@ consume(
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=474c0928fe2620c4a889378f46558336)
 
 This pattern is often found in combination with the [builder pattern], where you have a struct containing a number of optionally-configurable values, enabling the user to concisely set only the options they care about.
-
-While method chaining is often desirable as a concise way to perform a series of operations, returning `Self` interacts poorly with Rust's ownership system.
-
-Why Returning `Self` Doesn't Work Well
-======================================
 
 While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modyfing an object in a single statement), there are oftem more complex use cases that don't work nearly as well.
 
@@ -165,10 +162,10 @@ For this case, both `chain_ref` and `chain_move` work equally well with `consume
 
 Summary:
 
-|              | `consume_move`     | `consume_ref`      |
-|--------------|--------------------|--------------------|
-| `chain_move` | yes                | yes                |
-| `chain_ref`  | yes, not ergonomic | yes, not ergonomic |
+|              | `consume_move` | `consume_ref` |
+|--------------|----------------|---------------|
+| `chain_move` | yes            | yes           |
+| `chain_ref`  | not ergonomic  | not ergonomic |
 
 Modifying an Owned Value
 -----------------------
@@ -189,14 +186,49 @@ consume_move(foo);
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=80f4b820c323958a1a39c5bd0ae3e3ac)
 
-The `chain_move` version requires that you rebind the variable, though, which I consider to be an ergonomic failure:
+Doing the same with `chain_move` can also be made to work, though it requires the value to be rebound *after* the conditional chain:
 
 ```rust
 let foo = Foo::default();
-let foo = foo.chain_move().chain_move().chain_move();
+let foo = if some_condition {
+    foo.chain_move().chain_move().chain_move();
+} else {
+    foo
+};
+consume_ref(&foo);
+consume_move(foo);
 ```
 
-Note that if you have a `&mut Foo`, the `chain_move` version doesn't work at all, and you'll be left with no way to modify the value.
+Again, this is functional but somewhat awkward to construct (having the unnecessary `else` branch only to satisfy the borrow checker) and not necessarily an obvious construction for someone who's not already familiar with the details of Rust's ownership rules.
+
+Summary:
+
+|              | `consume_move` | `consume_ref` |
+|--------------|----------------|---------------|
+| `chain_move` | not ergonomic  | not ergonomic |
+| `chain_ref`  | yes            | yes           |
+
+Chaining Within a Function
+--------------------------
+
+Let's say you want to break some of your logic into a separate function. Again, this is possible with both approaches but a bit less ergonomic/idiomatic with `chain_move`:
+
+```rust
+fn do_modifications_ref(foo: &mut Foo) {
+    foo.chain_ref().chain_ref().chain_ref();
+}
+```
+
+```rust
+fn do_modifications_move(foo: Foo) -> Foo {
+    foo.chain_move().chain_move().chain_move()
+}
+```
+
+It's worth noting that you can still use `chain_ref` within `do_modifications_move`, but you can't use `chain_move` within `do_modifications_ref`.
+
+No Chaining At All
+------------------
 
 On a similar note, the `move_ref` version can also be used to modify the value without chaining, e.g.:
 
@@ -207,12 +239,14 @@ foo.chain_ref();
 foo.chain_ref();
 ```
 
-The `move_self` version again requires the variable to be re-bound in each statement, and cannot be used if you only have access to a `&mut Foo`.
+The `move_self` version again requires the variable to be re-bound in each statement:
 
-Modifying a Borrowed Value
---------------------------
-
-> TODO: Demonstrate what it looks like to apply method chaining to a `&mut Foo`.
+```rust
+let foo = Foo::default();
+let foo = foo.chain_move();
+let foo = foo.chain_move();
+let foo = foo.chain_move();
+```
 
 Results Summary
 ---------------
@@ -236,13 +270,13 @@ Results for `chain_ref`:
 Conclusions
 ===========
 
-
+> TODO: What are the conclusions?
 
 ---
 
-Template gist: https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101
+Extra references and stuff:
 
-Complete demo: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9
-
+* [Template gist](https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101)
+* [Complete demo](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9)
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
