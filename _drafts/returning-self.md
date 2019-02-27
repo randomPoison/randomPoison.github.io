@@ -230,7 +230,7 @@ It's worth noting that you can still use `chain_ref` within `do_modifications_mo
 No Chaining At All
 ------------------
 
-On a similar note, the `move_ref` version can also be used to modify the value without chaining, e.g.:
+Let's say you're a boring person and don't want to use method chaining at all. Plain-old method calls are enough for you. If that's the case, the `move_ref` version can also be used to modify the value without chaining, e.g.:
 
 ```rust
 let mut foo = Foo::default();
@@ -239,7 +239,7 @@ foo.chain_ref();
 foo.chain_ref();
 ```
 
-The `move_self` version again requires the variable to be re-bound in each statement:
+The `move_self` version again requires the variable to be re-bound in each statement, again having a negative impacts on the ergonomics of the code:
 
 ```rust
 let foo = Foo::default();
@@ -258,6 +258,8 @@ Results for `chain_move`:
 | Single chain       | yes            | yes           |
 | Use before consume | yes            | yes           |
 | Modify bound value | no             | no            |
+| In a function      | not ergonomic  | no            |
+| No chaining at all | not ergonomic  | not ergonomic |
 
 Results for `chain_ref`:
 
@@ -266,11 +268,46 @@ Results for `chain_ref`:
 | Single chain       | no             | yes           |
 | Use before consume | no             | no            |
 | Modify bound value | yes            | yes           |
+| In a function      | yes            | yes           |
+| No chaining at all | yes            | yes           |
 
 Conclusions
-===========
+-----------
 
-> TODO: What are the conclusions?
+So... what? What's the point of all of this? I can imagine that some folks reading this are going to think the examples I've chosen are bad or overexaggerate the ergonomic issues with some of the approaches, or that they're too contrived and don't represent realistic use cases.
+
+While I don't expect that I can convince everyone that the examples I've chosen are valid, suffice it to say that these are all cases that I have run into personally. With both methods that return `Self` and ones that return `&mut Self`, in various projects, I've run into cases where the clean, obvious thing I wanted to do wasn't possible (or wasn't ergonomic) due to one of the issues demonstrated above. In fact, the whole reason I've bothered to write this overly-long analysis in the first place was that I've run into this issue so many times that I wanted to demonstrate clearly and thoroughly that this is, in fact, a problem!
+
+To provide a real-world example, though: Let's say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) to spawn a child process. Your initial version looks something like this:
+
+```rust
+let result = Command::new("foo")
+    .arg("--bar")
+    .arg("--baz")
+    .arg("quux")
+    .status()
+    .unwrap();
+```
+
+At some point later, you realize that you want to only pass `--baz` flag conditionally, so you make the obvious changes to your code:
+
+```rust
+let command = Command::new("foo")
+    .arg("--bar");
+
+if set_baz {
+    command.arg("--baz");
+}
+
+let result = command
+    .arg("quux")
+    .status()
+    .unwrap();
+```
+
+And it doesn't compile, because you can't bind the result of the initial method chain when the chaining methods return `&mut Self` ([as `Command::arg` does](https://doc.rust-lang.org/std/process/struct.Command.html#method.arg)).
+
+This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust.
 
 ---
 
