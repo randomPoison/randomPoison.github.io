@@ -98,6 +98,13 @@ error[E0308]: mismatched types
              found type `&mut Foo`
 ```
 
+Summary:
+
+|              | `consume_move` | `consume_ref`|
+|--------------|----------------|--------------|
+| `chain_move` | yes            | yes          |
+| `chain_ref`  | no             | yes          |
+
 Use Before Consuming
 --------------------
 
@@ -158,10 +165,10 @@ For this case, both `chain_ref` and `chain_move` work equally well with `consume
 
 Summary:
 
-|              | `consume_move`              | `consume_ref`|
-|--------------|-----------------------------|--------------|
-| `chain_move` | yes                         | yes          |
-| `chain_ref`  | yes, with separate variable | yes          |
+|              | `consume_move`     | `consume_ref`      |
+|--------------|--------------------|--------------------|
+| `chain_move` | yes                | yes                |
+| `chain_ref`  | yes, not ergonomic | yes, not ergonomic |
 
 Modifying an Owned Value
 -----------------------
