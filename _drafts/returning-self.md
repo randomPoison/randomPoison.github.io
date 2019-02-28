@@ -248,8 +248,8 @@ let foo = foo.chain_move();
 let foo = foo.chain_move();
 ```
 
-Results Summary
----------------
+Use Cases Summary
+-----------------
 
 Results for `chain_move`:
 
@@ -271,8 +271,8 @@ Results for `chain_ref`:
 | In a function      | yes            | yes           |
 | No chaining at all | yes            | yes           |
 
-Conclusions
------------
+A Real-World Example
+--------------------
 
 So... what? What's the point of all of this? I can imagine that some folks reading this are going to think the examples I've chosen are bad or overexaggerate the ergonomic issues with some of the approaches, or that they're too contrived and don't represent realistic use cases.
 
@@ -305,9 +305,57 @@ let result = command
     .unwrap();
 ```
 
-And it doesn't compile, because you can't bind the result of the initial method chain when the chaining methods return `&mut Self` ([as `Command::arg` does](https://doc.rust-lang.org/std/process/struct.Command.html#method.arg)).
+And it doesn't compile, because you can't bind the result of the initial method chain when the chaining methods return `&mut Self` ([as `Command::arg` does](https://doc.rust-lang.org/std/process/struct.Command.html#method.arg)). To get it to work, you have to bind the result of `Command::new` to a variable, then perform all configuration on it:
+
+```rust
+let mut command = Command::new("foo");
+command.arg("--bar");
+
+if set_baz {
+    command.arg("--baz");
+}
+
+let result = command
+    .arg("quux")
+    .status()
+    .unwrap();
+```
 
 This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust.
+
+It's Ultimately a Hack
+----------------------
+
+Okay, so all I've done so far is demonstrate that returning `Self` to enable method chaining *doesn't* work. In order to truley explain why doing so should be considered an anti-pattern, I need to answer a more fundamental question: *Should* it work? Should we consider this a failing of Rust, that it doesn't play well with method chaining? Or is there something fundamentally wrong with this form of method chaining?
+
+To examine this, let's take a look at the function signature for `chain_ref`:
+
+```rust
+fn chain_ref(&mut self) -> &mut Self { ... }
+```
+
+Rust's strong type system allows us learn a lot about what a function can do soley based on its signature. Key here is that `chain_ref` only takes a single parameter: `&mut self`. We therefore know that it can (and almost certainly will) mutate `self` in some way. We also know that it must be pure relative to `self`, such that the same value for `self` will produce the same mutation, since `chain_ref` takes no other parameters to influence its behavior.
+
+But what does returning `&mut Self` tell us about `chain_ref`? Normally, the return type would tell us what the result of the operation is. But in this case, the returned value actually has nothing to do with the internal logic of `chain_ref`, it's only there to enable method chaining, which is completely orthogonal to `chain_ref` itself.
+
+This becomes especially problematic if your function has an actual return value. Take [`HashMap::insert`](https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert) as an example. `insert` returns the previous value if one was replaced, however it's not always necessary to check the return value, so it should be fine to use it in a method chain:
+
+```rust
+let map = HashMap::now()
+    .insert("foo", 1)
+    .insert("bar", 2)
+    .insert("baz", 3)
+    .insert("quux", 4);
+```
+
+But there's no way to make this work while still returning a value from `insert`.
+
+This is why, in my mind, returning `Self` soley to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives.
+
+Method Chaining in Rust
+-----------------------
+
+> Finally discuss better solutions for method chaining.
 
 ---
 
@@ -315,5 +363,29 @@ Extra references and stuff:
 
 * [Template gist](https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101)
 * [Complete demo](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9)
+
+`Command` example using cascade:
+
+```rust
+let result = cascade! {
+    Command::new("foo");
+    ..arg("--bar");
+    ..arg("--baz");
+    ..arg("quux");
+    ..status();
+}.unwrap()
+
+// Becomes:
+
+let result = cascade! {
+    command: Command::new("foo");
+    ..arg("--bar");
+    | if set_baz {
+        command.arg("--baz");
+    };
+    ..arg("quux");
+    ..status();
+}.unwrap()
+```
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
