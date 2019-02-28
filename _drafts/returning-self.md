@@ -239,7 +239,7 @@ foo.chain_ref();
 foo.chain_ref();
 ```
 
-The `move_self` version again requires the variable to be re-bound in each statement, again having a negative impacts on the ergonomics of the code:
+The `move_self` version again requires the variable to be re-bound in each statement, again making the code both harder to read and harder to write:
 
 ```rust
 let foo = Foo::default();
@@ -248,37 +248,10 @@ let foo = foo.chain_move();
 let foo = foo.chain_move();
 ```
 
-Use Cases Summary
------------------
-
-Results for `chain_move`:
-
-|                    | `consume_move` | `consume_ref` |
-|--------------------|----------------|---------------|
-| Single chain       | yes            | yes           |
-| Use before consume | yes            | yes           |
-| Modify bound value | no             | no            |
-| In a function      | not ergonomic  | no            |
-| No chaining at all | not ergonomic  | not ergonomic |
-
-Results for `chain_ref`:
-
-|                    | `consume_move` | `consume_ref` |
-|--------------------|----------------|---------------|
-| Single chain       | no             | yes           |
-| Use before consume | no             | no            |
-| Modify bound value | yes            | yes           |
-| In a function      | yes            | yes           |
-| No chaining at all | yes            | yes           |
-
 A Real-World Example
 --------------------
 
-So... what? What's the point of all of this? I can imagine that some folks reading this are going to think the examples I've chosen are bad or overexaggerate the ergonomic issues with some of the approaches, or that they're too contrived and don't represent realistic use cases.
-
-While I don't expect that I can convince everyone that the examples I've chosen are valid, suffice it to say that these are all cases that I have run into personally. With both methods that return `Self` and ones that return `&mut Self`, in various projects, I've run into cases where the clean, obvious thing I wanted to do wasn't possible (or wasn't ergonomic) due to one of the issues demonstrated above. In fact, the whole reason I've bothered to write this overly-long analysis in the first place was that I've run into this issue so many times that I wanted to demonstrate clearly and thoroughly that this is, in fact, a problem!
-
-To provide a real-world example, though: Let's say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) to spawn a child process. Your initial version looks something like this:
+To provide a real-world example, though: Let's say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) (which is designed to be used via method chaining by having all its methods return `&mut Self`) to spawn a child process. Your initial version looks something like this:
 
 ```rust
 let result = Command::new("foo")
@@ -289,7 +262,7 @@ let result = Command::new("foo")
     .unwrap();
 ```
 
-At some point later, you realize that you want to only pass `--baz` flag conditionally, so you make the obvious changes to your code:
+At some point later, you realize that you want to only pass the `--baz` flag conditionally, so you make the obvious changes to your code:
 
 ```rust
 let command = Command::new("foo")
@@ -321,7 +294,7 @@ let result = command
     .unwrap();
 ```
 
-This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust.
+This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust. On a more subjective note, the resulting code is also pretty gnarly and loses a lot of the simplicity and readability that the original verson had.
 
 It's Ultimately a Hack
 ----------------------
