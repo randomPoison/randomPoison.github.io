@@ -35,7 +35,7 @@ consume(
 
 This pattern is often found in combination with the [builder pattern], where you have a struct containing a number of optionally-configurable values, enabling the user to concisely set only the options they care about.
 
-While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modyfing an object in a single statement), there are oftem more complex use cases that don't work nearly as well.
+While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modifying an object in a single statement), there are often more complex use cases that don't work nearly as well.
 
 To demonstrate this, we're going to work with the following definitions:
 
@@ -73,7 +73,7 @@ Let's now take a look at each of the use cases we would like to support, and see
 Single Method Chain
 -------------------
 
-The most basic case is having a single long method chain, from construction into the consumtion of your type:
+The most basic case is having a single long method chain, from construction into the consumption of your type:
 
 ```rust
 consume_move(Foo::default().chain_move().chain_move());
@@ -172,7 +172,7 @@ Modifying an Owned Value
 
 Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. This means that we already have a bound, mutable variable that we would like to modify in the same method-chaining style that we use to crate the object.
 
-In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the inital chain of modifications):
+In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the initial chain of modifications):
 
 ```rust
 let mut foo = Foo::default();
@@ -294,12 +294,12 @@ let result = command
     .unwrap();
 ```
 
-This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust. On a more subjective note, the resulting code is also pretty gnarly and loses a lot of the simplicity and readability that the original verson had.
+This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust. On a more subjective note, the resulting code is also pretty gnarly and loses a lot of the simplicity and readability that the original version had.
 
 It's Ultimately a Hack
 ----------------------
 
-Okay, so all I've done so far is demonstrate that returning `Self` to enable method chaining *doesn't* work. In order to truley explain why doing so should be considered an anti-pattern, I need to answer a more fundamental question: *Should* it work? Should we consider this a failing of Rust, that it doesn't play well with method chaining? Or is there something fundamentally wrong with this form of method chaining?
+All I've done so far is demonstrate that returning `Self` to enable method chaining *doesn't* work. In order to truly explain why doing so should be considered an anti-pattern, I need to answer a more fundamental question: *Should* it work? Should we consider this a failing of Rust, that it doesn't play well with method chaining? Or is there something fundamentally wrong with this form of method chaining?
 
 To examine this, let's take a look at the function signature for `chain_ref`:
 
@@ -307,7 +307,7 @@ To examine this, let's take a look at the function signature for `chain_ref`:
 fn chain_ref(&mut self) -> &mut Self { ... }
 ```
 
-Rust's strong type system allows us learn a lot about what a function can do soley based on its signature. Key here is that `chain_ref` only takes a single parameter: `&mut self`. We therefore know that it can (and almost certainly will) mutate `self` in some way. We also know that it must be pure relative to `self`, such that the same value for `self` will produce the same mutation, since `chain_ref` takes no other parameters to influence its behavior.
+Rust's strong type system allows us learn a lot about what a function can do solely based on its signature. Key here is that `chain_ref` only takes a single parameter: `&mut self`. We therefore know that it can (and almost certainly will) mutate `self` in some way. We also know that it must be pure relative to `self`, such that the same value for `self` will produce the same mutation, since `chain_ref` takes no other parameters to influence its behavior.
 
 But what does returning `&mut Self` tell us about `chain_ref`? Normally, the return type would tell us what the result of the operation is. But in this case, the returned value actually has nothing to do with the internal logic of `chain_ref`, it's only there to enable method chaining, which is completely orthogonal to `chain_ref` itself.
 
@@ -323,7 +323,7 @@ let map = HashMap::now()
 
 But there's no way to make this work while still returning a value from `insert`.
 
-This is why, in my mind, returning `Self` soley to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives.
+This is why, in my mind, returning `Self` solely to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives.
 
 Method Chaining in Rust
 -----------------------
