@@ -325,10 +325,54 @@ But there's no way to make this work while still returning a value from `insert`
 
 This is why, in my mind, returning `Self` solely to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives.
 
-Method Chaining in Rust
------------------------
+Cascading as a Better Alternative
+---------------------------------
 
-> Finally discuss better solutions for method chaining.
+Now for the denouement, the part where I reveal the grand solution to all the problems I have laid out. As is often the case with Rust, we don't need to invent a whole new solution to this problem when we could simply steal the solution from another programming language. In this case it's Smalltalk as channelled through Dart.
+
+Dart provides first-class support for method chaining in the form of [method cascades](https://www.dartlang.org/guides/language/language-tour#cascade-notation-). The `..` operator is the the "cascaded method invocation operator", and behaves similarly to `.` except that discards the result of the method invocation and returns the original receiver instead. This allows *any* method to be chained in Dart, without requiring the author to have thought ahead of time to return `self`.
+
+In Dart, the syntax looks something like this:
+
+```dart
+final addressBook = (AddressBookBuilder()
+      ..name = 'jenny'
+      ..email = 'jenny@example.com'
+      ..phone = (PhoneNumberBuilder()
+            ..number = '415-555-0100'
+            ..label = 'home')
+          .build())
+    .build();
+```
+
+While there's no equivalent syntax built into Rust, we could achieve something very similar with the help of a fairly simple macro. In fact, there's already the [cascade](https://crates.io/crates/cascade) crate which does just that!
+
+```rust
+let foo = cascade! {
+    foo: Foo::default();
+    ..chain();
+    ..chain();
+    ..chain();
+    | if some_condition {
+        cascade! {
+            &mut foo;
+            ..chain();
+            ..chain();
+            ..chain();
+        }
+    };
+    ..chain();
+    ..chain();
+    ..chain();
+};
+consume_ref(&mut foo);
+consume_move(foo);
+```
+
+Looking to the Future
+---------------------
+
+I think `cascade` is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining, but I think we'll ultimately want a syntax built into the language to enable method chaining. The cascade syntax in Dart is pure syntactic sugar, which is all method chaining should be: A more convenient way of calling many methods without having any impact on the actual functionality.
 
 ---
 
@@ -345,8 +389,7 @@ let result = cascade! {
     ..arg("--bar");
     ..arg("--baz");
     ..arg("quux");
-    ..status();
-}.unwrap()
+}.status().unwrap();
 
 // Becomes:
 
@@ -357,8 +400,7 @@ let result = cascade! {
         command.arg("--baz");
     };
     ..arg("quux");
-    ..status();
-}.unwrap()
+}.status().unwrap();
 ```
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
