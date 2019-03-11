@@ -6,22 +6,11 @@ categories: rust
 
 <!-- markdownlint-disable MD002 -->
 
-It's a common pattern in the Rust ecosystem to have a function return some variation of `Self` (either `Self`, `&Self`, or `&mut Self`) i<!-- markdownlint-disable MD037 -->n order to enable method chaining. For example:
+It's a common pattern in the Rust ecosystem to have a function return some variation of `Self` (either `Self`, `&Self`, or `&mut Self`) in order to enable method chaining. For example:
 
 ```rust
-#[derive(Default)]
-struct Foo;
-
-impl Foo {
-    fn chain(self) -> Self {
-        self
-    }
-}
-
-fn consume(foo: Foo) {}
-
 // Create, modify, and consume a `Foo` in a single expression.
-// So concise! Such ergonomic! Wow!
+// So concise! Much ergonomic! Wow!
 consume(
     Foo::default()
         .chain()
@@ -29,6 +18,18 @@ consume(
         .chain()
         .chain()
 );
+
+// Method definitions that make this possible:
+// -------------------------------------------
+
+#[derive(Default)]
+struct Foo;
+
+impl Foo {
+    fn chain(self) -> Self { self }
+}
+
+fn consume(foo: Foo) {}
 ```
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=474c0928fe2620c4a889378f46558336)
@@ -94,6 +95,8 @@ error[E0308]: mismatched types
   = note: expected type `Foo`
              found type `&mut Foo`
 ```
+
+Since `chain_ref()` returns a `&mut Foo`, we can't use it anywhere a `Foo` is expected (though there are ways of working around this, which will be covered below).
 
 Summary:
 
@@ -373,6 +376,14 @@ Looking to the Future
 ---------------------
 
 I think `cascade` is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining, but I think we'll ultimately want a syntax built into the language to enable method chaining. The cascade syntax in Dart is pure syntactic sugar, which is all method chaining should be: A more convenient way of calling many methods without having any impact on the actual functionality.
+
+Conclusion
+----------
+
+So in summary:
+
+* Don't return any form of `Self` from a method if you're only doing so to enable method chaining.
+* Start using the cascade crate to enable method chaining.
 
 ---
 
