@@ -98,17 +98,19 @@ error[E0308]: mismatched types
 
 Since `chain_ref()` returns a `&mut Foo`, we can't use it anywhere a `Foo` is expected (though there are ways of working around this, which will be covered below).
 
-Summary:
-
-|              | `consume_move` | `consume_ref`|
-|--------------|----------------|--------------|
-| `chain_move` | yes            | yes          |
-| `chain_ref`  | no             | yes          |
-
 Use Before Consuming
 --------------------
 
-Let's say you needed to log the value of `Foo` before consuming it. This works fine with the `chain_move`:
+Let's say you needed to log the value of `Foo` before consuming it. The most intuitive way of doing this would be to directly bind the result of the chain to a variable, log the variable, then pass the variable to the consume method:
+
+```rust
+let foo = Foo::default().chain().chain().chain();
+println!("foo: {:?}", foo);
+consume_ref(&foo);
+consome_move(foo);
+```
+
+This can be done directly with `chain_move`:
 
 ```rust
 let foo = Foo::default().chain_move().chain_move();
@@ -143,7 +145,7 @@ error[E0716]: temporary value dropped while borrowed
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=fcf0b2d4b3422d5151fde27df66637ae)
 
-As the compiler helpfully notes, the temporary value created by `Foo::default()` is dropped at the end of the chain expression, so we can't bind it to a variable. Instead, we have to split binding the variable and performing the method chain into separate expressions:
+As the compiler helpfully notes, the temporary value created by `Foo::default()` is dropped at the end of the chain sequence, so we can't bind it to a variable. Instead, we must first create the initial `Foo` and bind it to a mutable variable. Once that's done, we are able to use `chain_ref` to apply modifications to it before logging and consuming the final value:
 
 ```rust
 let mut foo = Foo::default();
@@ -155,6 +157,8 @@ consume_move(foo);
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=234824151a664395c788cac897c49a9e)
 
+Note that you must use this approach to use `chain_ref` in combination with `consume_move`. By binding the intial `Foo` to a variable, you avoid the issue of it being a temporary value and being dropped too early.
+
 While this is functional, it's worth noting that it has a few drawbacks as compared to the `chain_move` version:
 
 * You can no longer create and modify the value in a single expression.
@@ -163,17 +167,19 @@ While this is functional, it's worth noting that it has a few drawbacks as compa
 
 For this case, both `chain_ref` and `chain_move` work equally well with `consume_ref` and `consume_move` since, once the object is bound to a variable, it is easy to either lend that value to another function or to transfer ownership entirely.
 
-Summary:
-
-|              | `consume_move` | `consume_ref` |
-|--------------|----------------|---------------|
-| `chain_move` | yes            | yes           |
-| `chain_ref`  | not ergonomic  | not ergonomic |
-
 Modifying an Owned Value
 -----------------------
 
-Now let's say that you want want perform and initial method chain, then conditionally apply another chain of operations to the same object. This means that we already have a bound, mutable variable that we would like to modify in the same method-chaining style that we use to crate the object.
+Now let's say that you want want perform an initial method chain, then conditionally apply another chain of operations to the same object. This means that we already have a bound, mutable variable that we would like to modify in the same method-chaining style that we use to crate the object. The ideal version of this would be as follows:
+
+```rust
+let mut foo = Foo::default().chain().chain().chain();
+if some_condition {
+    foo.chain().chain().chain();
+}
+consume_ref(&foo);
+consume_move(foo);
+```
 
 In this case, the `chain_ref` version performs reasonably well (though you again need to first bind the variable before performing the initial chain of modifications):
 
@@ -204,12 +210,7 @@ consume_move(foo);
 
 Again, this is functional but somewhat awkward to construct (having the unnecessary `else` branch only to satisfy the borrow checker) and not necessarily an obvious construction for someone who's not already familiar with the details of Rust's ownership rules.
 
-Summary:
-
-|              | `consume_move` | `consume_ref` |
-|--------------|----------------|---------------|
-| `chain_move` | not ergonomic  | not ergonomic |
-| `chain_ref`  | yes            | yes           |
+In this case, both `chain_ref` and `chain_move` work, but both have ergonomic drawbacks as compared to the ideal version.
 
 Chaining Within a Function
 --------------------------
@@ -233,7 +234,7 @@ It's worth noting that you can still use `chain_ref` within `do_modifications_mo
 No Chaining At All
 ------------------
 
-Let's say you're a boring person and don't want to use method chaining at all. Plain-old method calls are enough for you. If that's the case, the `move_ref` version can also be used to modify the value without chaining, e.g.:
+Let's say you're a boring person and don't want to use method chaining at all, plain-old method calls are enough for you. If that's the case, the `move_ref` version can also be used to modify the value without chaining, e.g.:
 
 ```rust
 let mut foo = Foo::default();
@@ -242,7 +243,7 @@ foo.chain_ref();
 foo.chain_ref();
 ```
 
-The `move_self` version again requires the variable to be re-bound in each statement, again making the code both harder to read and harder to write:
+The `move_self` version can technically be used without chaining, but requires the variable to be re-bound in each statement, again making the code both harder to read and harder to write:
 
 ```rust
 let foo = Foo::default();
@@ -254,7 +255,9 @@ let foo = foo.chain_move();
 A Real-World Example
 --------------------
 
-To provide a real-world example, though: Let's say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) (which is designed to be used via method chaining by having all its methods return `&mut Self`) to spawn a child process. Your initial version looks something like this:
+In the abstract, this may seem like a number of minor issues and trivial complaints. To provide a real-world example of the implications these drawbacks have, let's look at an example that I ran into (one that motivated my writing this articlee).
+
+Say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) to spawn a child process. `Command` is designed to be used via method chaining by having all its methods return `&mut Self`. Your initial version looks something like this:
 
 ```rust
 let result = Command::new("foo")
@@ -310,11 +313,11 @@ To examine this, let's take a look at the function signature for `chain_ref`:
 fn chain_ref(&mut self) -> &mut Self { ... }
 ```
 
-Rust's strong type system allows us learn a lot about what a function can do solely based on its signature. Key here is that `chain_ref` only takes a single parameter: `&mut self`. We therefore know that it can (and almost certainly will) mutate `self` in some way. We also know that it must be pure relative to `self`, such that the same value for `self` will produce the same mutation, since `chain_ref` takes no other parameters to influence its behavior.
+Rust's strong type system allows us learn a lot about what a function can do solely based on its signature. Key here is that `chain_ref` only takes a single parameter: `&mut self`. We therefore know that it can (and almost certainly will) mutate `self` in some way. We also know that it is probably pure relative to `self`, such that the same value for `self` will produce the same mutation, since `chain_ref` takes no other parameters to influence its behavior.
 
 But what does returning `&mut Self` tell us about `chain_ref`? Normally, the return type would tell us what the result of the operation is. But in this case, the returned value actually has nothing to do with the internal logic of `chain_ref`, it's only there to enable method chaining, which is completely orthogonal to `chain_ref` itself.
 
-This becomes especially problematic if your function has an actual return value. Take [`HashMap::insert`](https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert) as an example. `insert` returns the previous value if one was replaced, however it's not always necessary to check the return value, so it should be fine to use it in a method chain:
+This becomes especially problematic if your function has an actual return value. Take [`HashMap::insert`](https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert) as an example. `insert` returns the previous value if one was replaced, however it's not always necessary to check the return value. In some cases, I may want to insert many elements into a hash map, in which case using a method chain would be clear and concise:
 
 ```rust
 let map = HashMap::now()
@@ -326,12 +329,12 @@ let map = HashMap::now()
 
 But there's no way to make this work while still returning a value from `insert`.
 
-This is why, in my mind, returning `Self` solely to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives.
+This is why, in my mind, returning `Self` solely to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives. I'd argue that this is true in any language, but Rust's ownership semantics makes this pattern extra painful in a way that it isn't for languages that doesn't track ownership.
 
 Cascading as a Better Alternative
 ---------------------------------
 
-Now for the denouement, the part where I reveal the grand solution to all the problems I have laid out. As is often the case with Rust, we don't need to invent a whole new solution to this problem when we could simply steal the solution from another programming language. In this case it's Smalltalk as channelled through Dart.
+As is often the case, we don't need to invent a whole new solution to this problem when we could simply steal good ideas from another programming language.
 
 Dart provides first-class support for method chaining in the form of [method cascades](https://www.dartlang.org/guides/language/language-tour#cascade-notation-). The `..` operator is the the "cascaded method invocation operator", and behaves similarly to `.` except that discards the result of the method invocation and returns the original receiver instead. This allows *any* method to be chained in Dart, without requiring the author to have thought ahead of time to return `self`.
 
@@ -372,10 +375,7 @@ consume_ref(&mut foo);
 consume_move(foo);
 ```
 
-Looking to the Future
----------------------
-
-I think `cascade` is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining, but I think we'll ultimately want a syntax built into the language to enable method chaining. The cascade syntax in Dart is pure syntactic sugar, which is all method chaining should be: A more convenient way of calling many methods without having any impact on the actual functionality.
+I think the `cascade` crate is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining. I think we'll ultimately want a syntax built into the language to enable method chaining, though I expect we'll want to see wider community-wide adoption of `cascade` (or an alternative solution) before trying to make changes to the language itself.
 
 Conclusion
 ----------
@@ -383,7 +383,7 @@ Conclusion
 So in summary:
 
 * Don't return any form of `Self` from a method if you're only doing so to enable method chaining.
-* Start using the cascade crate to enable method chaining.
+* Start using the `cascade` crate to enable method chaining.
 
 ---
 
