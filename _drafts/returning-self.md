@@ -157,7 +157,7 @@ consume_move(foo);
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=234824151a664395c788cac897c49a9e)
 
-Note that you must use this approach to use `chain_ref` in combination with `consume_move`. By binding the intial `Foo` to a variable, you avoid the issue of it being a temporary value and being dropped too early.
+Note that you must use this approach to use `chain_ref` in combination with `consume_move`. By binding the initial `Foo` to a variable, you avoid the issue of it being a temporary value and being dropped too early.
 
 While this is functional, it's worth noting that it has a few drawbacks as compared to the `chain_move` version:
 
