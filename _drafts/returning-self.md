@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Returning Self Considered An Anti-Pattern"
+title: "Returning Self Considered Harmful"
 categories: rust
 ---
 
