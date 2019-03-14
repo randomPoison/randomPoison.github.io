@@ -234,7 +234,7 @@ It's worth noting that you can still use `chain_ref` within `do_modifications_mo
 No Chaining At All
 ------------------
 
-Let's say you're a boring person and don't want to use method chaining at all, plain-old method calls are enough for you. If that's the case, the `move_ref` version can also be used to modify the value without chaining, e.g.:
+Let's say you're a boring person and don't want to use method chaining at all, plain-old method calls are enough for you. If that's the case, the `chain_ref` version can also be used to modify the value without chaining, e.g.:
 
 ```rust
 let mut foo = Foo::default();
@@ -243,7 +243,7 @@ foo.chain_ref();
 foo.chain_ref();
 ```
 
-The `move_self` version can technically be used without chaining, but requires the variable to be re-bound in each statement, again making the code both harder to read and harder to write:
+The `chain_move` version can technically be used without chaining, but requires the variable to be re-bound in each statement, again making the code both harder to read and harder to write:
 
 ```rust
 let foo = Foo::default();
@@ -255,7 +255,7 @@ let foo = foo.chain_move();
 A Real-World Example
 --------------------
 
-In the abstract, this may seem like a number of minor issues and trivial complaints. To provide a real-world example of the implications these drawbacks have, let's look at an example that I ran into (one that motivated my writing this articlee).
+In the abstract, this may seem like a number of minor issues and trivial complaints. To provide a real-world example of the implications these drawbacks have, let's look at an example that I ran into (one that motivated my writing this article).
 
 Say you're writing a tool that uses [std::process::Command](https://doc.rust-lang.org/std/process/struct.Command.html) to spawn a child process. `Command` is designed to be used via method chaining by having all its methods return `&mut Self`. Your initial version looks something like this:
 
@@ -327,9 +327,9 @@ let map = HashMap::now()
     .insert("quux", 4);
 ```
 
-But there's no way to make this work while still returning a value from `insert`.
+But there's no way to make this work while still returning a value from `insert`: You can either return a value or you can return `Self`, but not both.
 
-This is why, in my mind, returning `Self` solely to enable method chaining is a hack and an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. In the best case scenario it harmless if inconvenient. In the worst case it can actively make some uses cases impossible without adding non-chaining method alternatives. I'd argue that this is true in any language, but Rust's ownership semantics makes this pattern extra painful in a way that it isn't for languages that doesn't track ownership.
+This is why returning `Self` should be considered an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. It's worth noting that this is true in any programming language, but Rust's semantics makes this pattern extra painful in a way that it isn't for languages that doesn't track ownership. As such, it's especially important that we recognize the drawbacks of this pattern and seek out alternatives that work better for the language.
 
 Cascading as a Better Alternative
 ---------------------------------
