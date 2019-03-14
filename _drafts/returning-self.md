@@ -67,7 +67,9 @@ fn consume_ref(foo: &Foo) {
 }
 ```
 
-This allows us to compare the two primary ways that people implement method chaining: Returning `Self`, and returning `&mut Self`. We also look at two ways of consuming the value: By ref and by value. As we'll see, the way the final object will be consumed often interacts differently with the different chaining methods.
+We have a struct `Foo` with some minimal internal state that we can mutate. `Foo` defines two methods for performing mutation: `chain_move`, which takes and returns `self`, and `chain_ref`, which takes and returns `&mut self`. This allows us to compare the two primary ways that people implement method chaining. We also define two functions for consuming the final value: `consume_move` and `consume_ref`, which take ownership of the value or borrow it, respectively. As we'll see, the way the final object will be consumed often interacts differently with the different chaining methods.
+
+In the examples, I will also sometimes use an imaginary method `chain` to demonstrate an idealized way of performing method chainging that isn't actually possible in Rust.
 
 Let's now take a look at each of the use cases we would like to support, and see how they work with each of the method chaining approaches.
 
@@ -75,6 +77,12 @@ Single Method Chain
 -------------------
 
 The most basic case is having a single long method chain, from construction into the consumption of your type:
+
+```rust
+consume(Foo::default().chain().chain());
+```
+
+This works reasonably well with both `chain_move` and `chain_ref`:
 
 ```rust
 consume_move(Foo::default().chain_move().chain_move());
@@ -95,6 +103,8 @@ error[E0308]: mismatched types
   = note: expected type `Foo`
              found type `&mut Foo`
 ```
+
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=876fb51a394c47b29a4baa1aefd6f822)
 
 Since `chain_ref()` returns a `&mut Foo`, we can't use it anywhere a `Foo` is expected (though there are ways of working around this, which will be covered below).
 
@@ -208,6 +218,8 @@ consume_ref(&foo);
 consume_move(foo);
 ```
 
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=8b2ca33b23cbbabad739be513639001f)
+
 Again, this is functional but somewhat awkward to construct (having the unnecessary `else` branch only to satisfy the borrow checker) and not necessarily an obvious construction for someone who's not already familiar with the details of Rust's ownership rules.
 
 In this case, both `chain_ref` and `chain_move` work, but both have ergonomic drawbacks as compared to the ideal version.
@@ -268,6 +280,8 @@ let result = Command::new("foo")
     .unwrap();
 ```
 
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=5124c4f3041bd78893e58fcdc815f0d6)
+
 At some point later, you realize that you want to only pass the `--baz` flag conditionally, so you make the obvious changes to your code:
 
 ```rust
@@ -284,6 +298,8 @@ let result = command
     .unwrap();
 ```
 
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=179416e54846de7d564b465ff11b6e92)
+
 And it doesn't compile, because you can't bind the result of the initial method chain when the chaining methods return `&mut Self` ([as `Command::arg` does](https://doc.rust-lang.org/std/process/struct.Command.html#method.arg)). To get it to work, you have to bind the result of `Command::new` to a variable, then perform all configuration on it:
 
 ```rust
@@ -299,6 +315,8 @@ let result = command
     .status()
     .unwrap();
 ```
+
+> [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=77df0254b3abde92ae409f259d545bec)
 
 This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust. On a more subjective note, the resulting code is also pretty gnarly and loses a lot of the simplicity and readability that the original version had.
 
