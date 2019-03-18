@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Returning Self Considered Harmful"
+title: "Chaining Functions Without Returning Self"
 categories: rust
 ---
 
@@ -38,43 +38,59 @@ This pattern is often found in combination with the [builder pattern], where you
 
 While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modifying an object in a single statement), there are often more complex use cases that don't work nearly as well.
 
-To demonstrate this, we're going to work with the following definitions:
+In this post, I intend to demonstrate the following points:
+
+* Returning `Self` (including `&Self` and `&mut Self`) is not an effective way of achieving method chaining in Rust.
+* Method and function chaining should be orthogonal to the return type of a function.
+* You should only return some variant of `Self` from a function if it's semantically meaningful to do so.
+* Cascading and pipelining offer promising alternatives to returning `Self` when you want method chaining.
+
+## Chaining by Returning `Self`
+
+Since returning `Self` is currently the de facto way of enabling method chaining in the Rust ecosystem, I'm going to start by demonstrating that doing so doesn't work as well as we would like. To show this, we're going to work with the following definitions:
 
 ```rust
+// Define a struct `Foo` with some internal state that the methods
+// will modify. We'll use `Foo::default()` throughout the examples
+// to create the initial instance of the data.
 #[derive(Debug, Default)]
 struct Foo {
     value: usize,
 }
 
 impl Foo {
+    // Define a method that can be chained by taking and returning
+    // ownership of the data.
     fn chain_move(mut self) -> Self {
         self.value += 1;
         self
     }
 
+    // Define a method that can be chained by taking and returning
+    // a borrow of the data.
     fn chain_ref(&mut self) -> &mut Self {
         self.value += 1;
         self
     }
 }
 
+// Define a function that will consume the final data by taking
+// ownership of it.
 fn consume_move(foo: Foo) {
     println!("{:?}", foo);
 }
 
+// Define a function that will consume the final data by borrowing it.
 fn consume_ref(foo: &Foo) {
     println!("{:?}", foo);
 }
 ```
 
-We have a struct `Foo` with some minimal internal state that we can mutate. `Foo` defines two methods for performing mutation: `chain_move`, which takes and returns `self`, and `chain_ref`, which takes and returns `&mut self`. This allows us to compare the two primary ways that people implement method chaining. We also define two functions for consuming the final value: `consume_move` and `consume_ref`, which take ownership of the value or borrow it, respectively. As we'll see, the way the final object will be consumed often interacts differently with the different chaining methods.
-
-In the examples, I will also sometimes use an imaginary method `chain` to demonstrate an idealized way of performing method chainging that isn't actually possible in Rust.
+In the examples, I will also sometimes use an imaginary method `chain` to demonstrate an idealized way of performing method chaining that isn't actually possible in Rust.
 
 Let's now take a look at each of the use cases we would like to support, and see how they work with each of the method chaining approaches.
 
-Single Method Chain
--------------------
+### Single Method Chain
 
 The most basic case is having a single long method chain, from construction into the consumption of your type:
 
@@ -82,7 +98,7 @@ The most basic case is having a single long method chain, from construction into
 consume(Foo::default().chain().chain());
 ```
 
-This works reasonably well with both `chain_move` and `chain_ref`:
+This works reasonably well with both `chain_move` and `chain_ref` so long as you match the chaining style with the consumer:
 
 ```rust
 consume_move(Foo::default().chain_move().chain_move());
@@ -108,8 +124,7 @@ error[E0308]: mismatched types
 
 Since `chain_ref()` returns a `&mut Foo`, we can't use it anywhere a `Foo` is expected (though there are ways of working around this, which will be covered below).
 
-Use Before Consuming
---------------------
+### Use Before Consuming
 
 Let's say you needed to log the value of `Foo` before consuming it. The most intuitive way of doing this would be to directly bind the result of the chain to a variable, log the variable, then pass the variable to the consume method:
 
@@ -177,8 +192,7 @@ While this is functional, it's worth noting that it has a few drawbacks as compa
 
 For this case, both `chain_ref` and `chain_move` work equally well with `consume_ref` and `consume_move` since, once the object is bound to a variable, it is easy to either lend that value to another function or to transfer ownership entirely.
 
-Modifying an Owned Value
------------------------
+### Modifying an Owned Value
 
 Now let's say that you want want perform an initial method chain, then conditionally apply another chain of operations to the same object. This means that we already have a bound, mutable variable that we would like to modify in the same method-chaining style that we use to crate the object. The ideal version of this would be as follows:
 
@@ -224,8 +238,7 @@ Again, this is functional but somewhat awkward to construct (having the unnecess
 
 In this case, both `chain_ref` and `chain_move` work, but both have ergonomic drawbacks as compared to the ideal version.
 
-Chaining Within a Function
---------------------------
+### Chaining Within a Function
 
 Let's say you want to break some of your logic into a separate function. Again, this is possible with both approaches but a bit less ergonomic/idiomatic with `chain_move`:
 
@@ -243,8 +256,7 @@ fn do_modifications_move(foo: Foo) -> Foo {
 
 It's worth noting that you can still use `chain_ref` within `do_modifications_move`, but you can't use `chain_move` within `do_modifications_ref`.
 
-No Chaining At All
-------------------
+### No Chaining At All
 
 Let's say you're a boring person and don't want to use method chaining at all, plain-old method calls are enough for you. If that's the case, the `chain_ref` version can also be used to modify the value without chaining, e.g.:
 
@@ -264,8 +276,7 @@ let foo = foo.chain_move();
 let foo = foo.chain_move();
 ```
 
-A Real-World Example
---------------------
+### A Real-World Example
 
 In the abstract, this may seem like a number of minor issues and trivial complaints. To provide a real-world example of the implications these drawbacks have, let's look at an example that I ran into (one that motivated my writing this article).
 
@@ -320,8 +331,7 @@ let result = command
 
 This is something that's easy for me to mess up as a fairly experienced Rust developer, and it can be absolutely confusing and frustrating for those new to Rust. On a more subjective note, the resulting code is also pretty gnarly and loses a lot of the simplicity and readability that the original version had.
 
-It's Ultimately a Hack
-----------------------
+## Method Chaining is Orthogonal to Return Value
 
 All I've done so far is demonstrate that returning `Self` to enable method chaining *doesn't* work. In order to truly explain why doing so should be considered an anti-pattern, I need to answer a more fundamental question: *Should* it work? Should we consider this a failing of Rust, that it doesn't play well with method chaining? Or is there something fundamentally wrong with this form of method chaining?
 
@@ -349,8 +359,11 @@ But there's no way to make this work while still returning a value from `insert`
 
 This is why returning `Self` should be considered an anti-pattern: You're contorting your API in order to enable something that's completely orthogonal to what your API is doing. It's worth noting that this is true in any programming language, but Rust's semantics makes this pattern extra painful in a way that it isn't for languages that doesn't track ownership. As such, it's especially important that we recognize the drawbacks of this pattern and seek out alternatives that work better for the language.
 
-Cascading as a Better Alternative
----------------------------------
+## When to Return `Self`
+
+> TODO: Elaborate on cases where it makes sense to return a variant of `Self`.
+
+## Cascading and Pipelining
 
 As is often the case, we don't need to invent a whole new solution to this problem when we could simply steal good ideas from another programming language.
 
@@ -395,8 +408,7 @@ consume_move(foo);
 
 I think the `cascade` crate is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining. I think we'll ultimately want a syntax built into the language to enable method chaining, though I expect we'll want to see wider community-wide adoption of `cascade` (or an alternative solution) before trying to make changes to the language itself.
 
-Conclusion
-----------
+## Conclusion
 
 So in summary:
 
