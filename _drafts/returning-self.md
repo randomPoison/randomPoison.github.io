@@ -365,7 +365,7 @@ The fundamental problem with returning `self` solely for the purpose of enabling
 
 At this point I've covered the practical issues with returning `self`  and the more conceptual reason why it doesn't make sense. Before I move on to discussing alternate solutions, I want to emphasize an important point: Returning `self` is only an issue if it's being done **solely to enable method chaining**. It's entirely reasonable to return `self` from a function if doing so is semantically meaningful, and I am in no way trying to say that it is never appropriate to return `self` from a method in Rust. It only becomes an issue if you're returning `self` from a function for no reason other than to allow users to chain those methods together.
 
-## Cascading and Pipelining
+## Method Cascades
 
 As is often the case, we don't need to invent a whole new solution to this problem when we could simply steal good ideas from another programming language.
 
@@ -408,42 +408,13 @@ consume_ref(&mut foo);
 consume_move(foo);
 ```
 
-I think the `cascade` crate is great and sufficient to allow us to stop returning `Self` for the sole purpose of enabling method chaining. I think we'll ultimately want a syntax built into the language to enable method chaining, though I expect we'll want to see wider community-wide adoption of `cascade` (or an alternative solution) before trying to make changes to the language itself.
+Since this pattern hasn't yet seen wide usage in the Rust community, I expect that it will take some time and iteration to fully adapt it to Rust as a language (though the cascade crate is certainly a good start). Looking to the future, I would personally like to see this pattern become "official" in some regards, either through inclusion in the standard library or 🤞 a native syntax 🤞.
 
 ## Conclusion
 
 So in summary:
 
-* Don't return any form of `Self` from a method if you're only doing so to enable method chaining.
-* Start using the `cascade` crate to enable method chaining.
-
----
-
-Extra references and stuff:
-
-* [Template gist](https://gist.github.com/6aa2a0992ed5043e72ed804e5f221101)
-* [Complete demo](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=1bf8a2fe6044498841aeabb223fab6f9)
-
-`Command` example using cascade:
-
-```rust
-let result = cascade! {
-    Command::new("foo");
-    ..arg("--bar");
-    ..arg("--baz");
-    ..arg("quux");
-}.status().unwrap();
-
-// Becomes:
-
-let result = cascade! {
-    command: Command::new("foo");
-    ..arg("--bar");
-    | if set_baz {
-        command.arg("--baz");
-    };
-    ..arg("quux");
-}.status().unwrap();
-```
+* Don't return `self` from methods if you're **only** doing so to enable chaining.
+* Start using the `cascade` crate instead!
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
