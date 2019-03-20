@@ -361,9 +361,9 @@ But there's no way to make this work while still returning a value from `insert`
 
 The fundamental problem with returning `self` solely for the purpose of enabling method chaining is that you're contorting your API in order to enable something that's completely orthogonal to what your API is doing. Your function's signature should reflect its behavior, and should be usable in a method chain regardless of its return type.
 
-## When to Return `self`
+## We're Only Talking About Method Chains
 
-> TODO: Elaborate on cases where it makes sense to return a variant of `Self`.
+At this point I've covered the practical issues with returning `self`  and the more conceptual reason why it doesn't make sense. Before I move on to discussing alternate solutions, I want to emphasize an important point: Returning `self` is only an issue if it's being done **solely to enable method chaining**. It's entirely reasonable to return `self` from a function if doing so is semantically meaningful, and I am in no way trying to say that it is never appropriate to return `self` from a method in Rust. It only becomes an issue if you're returning `self` from a function for no reason other than to allow users to chain those methods together.
 
 ## Cascading and Pipelining
 
@@ -447,4 +447,3 @@ let result = cascade! {
 ```
 
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
-
