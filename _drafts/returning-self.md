@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Chaining Functions Without Returning Self"
-categories: rust
+permalink: /posts/returning-self
 ---
 
 <!-- markdownlint-disable MD002 -->
