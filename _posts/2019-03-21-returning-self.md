@@ -420,4 +420,6 @@ So in summary:
 * Don't return `self` from methods if you're **only** doing so to enable chaining.
 * Start using the `cascade` crate instead!
 
+Please visit [the Rust users forum](https://users.rust-lang.org/t/blog-post-chaining-functions-without-returning-self/26504) for comments and discussion!
+
 [builder pattern]: https://github.com/rust-unofficial/patterns/blob/master/patterns/builder.md
