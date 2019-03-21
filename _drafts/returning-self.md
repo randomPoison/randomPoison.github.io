@@ -6,7 +6,7 @@ permalink: /posts/returning-self
 
 <!-- markdownlint-disable MD002 -->
 
-It's a common pattern in the Rust ecosystem to have a function return some variation of `self` at the end of a function in order to enable method chaining. For example:
+It's a common pattern in the Rust ecosystem to have a function return `self` at the end in order to enable method chaining. For example:
 
 ```rust
 // Create, modify, and consume a `Foo` in a single expression.
@@ -23,7 +23,9 @@ consume(
 // -------------------------------------------
 
 #[derive(Default)]
-struct Foo;
+struct Foo {
+    // Some internal state.
+}
 
 impl Foo {
     fn chain(self) -> Self {
@@ -32,28 +34,29 @@ impl Foo {
     }
 }
 
-fn consume(foo: Foo) {}
+fn consume(foo: Foo) {
+    // Do something with the final `Foo` after it's
+    // been fully initialized and configured.
+}
 ```
 
 > [Run in the Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=474c0928fe2620c4a889378f46558336)
 
-This pattern is often found in combination with the [builder pattern], thereby enabling the user to concisely set only the options they care about.
+This approach is often used in combination with the [builder pattern], though it can also be applied to a wide variety of other situations. The above example demonstrates the most straightforward of these cases (i.e. initializing and modifying an object in a single statement), but, as I'm going to demonstrate, this approach quickly breaks down when applied to a wider variety of use cases.
 
-While the above example demonstrates the most straightforward way of doing method chaining (i.e. initializing and modifying an object in a single statement), there are often more complex use cases that don't work nearly as well.
-
-In this post, I intend to demonstrate the following points:
+In this post, I intend to cover the following points:
 
 * Returning `self` is not an effective way of achieving method chaining in Rust.
 * Method and function chaining should be orthogonal to the return type of a function.
 * You should only return `self` from a function if it's semantically meaningful to do so.
-* Cascading and pipelining offer promising alternatives to returning `self` when you want method chaining.
+* Method cascades provide a promising alternative to returning `self` when you want method chaining.
 
 ## Chaining by Returning `self`
 
 Since returning `self` is currently the de facto way of enabling method chaining in the Rust ecosystem, I'm going to start by demonstrating that doing so doesn't work as well as we would like. To show this, we're going to work with the following definitions:
 
 ```rust
-// Define a struct `Foo` with some internal state that the methods
+// Define a struct `Foo` with some internal state that its methods
 // will modify. We'll use `Foo::default()` throughout the examples
 // to create the initial instance of the data.
 #[derive(Debug, Default)]
