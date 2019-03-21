@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Chaining Functions Without Returning Self"
-permalink: /posts/returning-self
+permalink: /posts/returning-self/
 ---
 
 <!-- markdownlint-disable MD002 -->
