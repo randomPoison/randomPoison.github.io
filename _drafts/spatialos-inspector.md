@@ -24,6 +24,20 @@ This is also the provided scene view in Unity (in the Hierarchy view) and Unreal
 
 > Output of one module becomes the input of another. Takes inspiration from visual scripting tools to model the flow of data. Putting the emphasis on *data* (as opposed to high-level views of "objects") is more in-line with the ECS paradigm.
 
+The query editor itself doesn't actually show the results of the query, though. Instead, the query's output is piped into one or more other modules that are used to visualize the entity data. This highlights the next big thing that the SpatialOS inspector does well: It builds upon a modular set of tools that can be composed by piping the output of one module into another.
+
+![Inputs and outputs between modules in the SpatialOS inspector](../assets/spatialos-inspector-input-output.png)
+
+This is brilliant for two reasons:
+
+* It's a truly modular approach to constructing your UI. Each module takes specific inputs to configure it, but doesn't specify where those configuration values need to come from. As such, you can manually set values yourself, use the output from another module, use values set on components/workers, or any other source of data that the inspector supports. While the SpatialOS inspector isn't itself extensible, one can easily imagine this same model working well with custom extensions and plugins.
+* It puts the emphasis on data and how it flows through the components of your UI. This 
+
 ## Different Visualizations for Different Situations
 
 > Sometimes you want a viewport showing things moving around in realtime, sometimes you want a list of data, often you want both or multiples of each.
+
+## It Looks Really Good
+
+I mean damn, just look at it :eyes:
+
