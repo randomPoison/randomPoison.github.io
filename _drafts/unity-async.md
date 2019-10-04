@@ -43,6 +43,54 @@ else
 
 Fortunately, `await` doesn't have this restriction; If you `await` a task that completes synchronously, the calling task will also resume synchronously. It's worth noting, though, that if you `await` a task that doesn't complete synchronously, your task won't resume until the next frame even if the child task completes within the same frame[^sub-frame-await].
 
+## Execution Order Stays The Same
+
+When starting a coroutine, the body of the coroutine will synchronously execute up to the first `yield` statement:
+
+```c#
+public IEnumerator MyCoroutine()
+{
+    Debug.Log("Beginning of MyCoroutine()");
+    yield return null;
+    Debug.Log("End of MyCoroutine()");
+}
+
+// The following test:
+Debug.Log("Before coroutine");
+StartCoroutine(MyCoroutine());
+Debug.Log("After coroutine");
+
+// Will print the following:
+//
+// Before coroutine
+// Beginning of MyCoroutine()
+// After coroutine
+// "End of MyCoroutine()"
+```
+
+Tasks work the same way, synchronously executing up to the first `await` before returning to the calling code:
+
+```c#
+private async void VoidTask()
+{
+    Debug.Log("Doing a void task!");
+    await UniTask.Delay(1000);
+    Debug.Log("Void task resumed!");
+}
+
+// The following test:
+Debug.Log("About to call VoidTask()");
+VoidTask();
+Debug.Log("Returned from VoidTask()");
+
+// Will print the following:
+//
+// About to call VoidTask()
+// Doing a void task!
+// Returned from VoidTask()
+// Void task resumed!
+```
+
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
 [^sub-frame-await]: In theory, it would be possible to resume a task within the same frame by having it resume at a later part of the update loop, e.g. `await` during the main update and then resume during `LateUpdate`. However, this is probably not currently supported by UniTask and would probably not be something that is generally useful.
