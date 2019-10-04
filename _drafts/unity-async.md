@@ -102,7 +102,24 @@ For starting tasks, this change is convenient and removes some of the confusion 
 
 By default, a task will end automatically once it runs to completion. However, if you want to be able to cancel a task before it completes you'll need to [use a `CancellationToken`](https://docs.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-cancel-a-task-and-its-children):
 
+```c#
+cancellation = new CancellationTokenSource();
+try
+{
+    await UniTask.Delay(500, cancellationToken: cancellation.Token);
+}
+finally
+{
+    cancellation.Dispose();
+    cancellation = null;
+}
 
+// Somewhere else, in reaction to an event that
+// should cancel the pending task:
+cancellation.Cancel();
+```
+
+This approach requires a bit more setup than is needed with coroutines (mainly to handle disposing of the `CancellationTokenSource` when done), but makes the default behavior more intuitive and gives you better control over when your tasks run.
 
 ### Cancel Task When Game Object is Destroyed
 
@@ -130,7 +147,38 @@ var sprite = await assetBundle
 spriteRenderer.sprite = sprite;
 ```
 
+### Perform Cleanup When Task is Cancelled
 
+One of the problems with coroutines is that there's no way to detect if a coroutine has been cancelled, making it effectively impossible to perform cleanup or consistently maintain invariants in the face of arbitrary coroutine cancellation. Fortunately, with async/await you can use `try` blocks to perform any final cleanup logic the same way you would anywhere else:
+
+```c#
+try
+{
+    await SomeAsyncOperation();
+}
+finally
+{
+    // This logic will be run, even if the task
+    // is cancelled.
+}
+```
+
+This works with task cancellation as well, since cancellation is done by throwing an [`OperationCancelledException`](https://docs.microsoft.com/en-us/dotnet/api/system.operationcanceledexception). This also means that it's possible to run logic only in the case that the task was cancelled while letting exceptions propagate as normal:
+
+```
+try
+{
+    await SomeAsyncOperation();
+}
+catch (OperationCancelledException)
+{
+    // This logic only runs if the task was
+    // cancelled. Be sure to re-throw the
+    // exception so that any parent tasks are
+    // cancelled as well.
+    throw;
+}
+```
 
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
