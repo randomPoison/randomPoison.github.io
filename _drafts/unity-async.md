@@ -91,6 +91,47 @@ Debug.Log("Returned from VoidTask()");
 // Void task resumed!
 ```
 
+## Starting and Stopping Tasks
+
+There are two major differences between coroutines and tasks that you'll need to be aware of:
+
+* Tasks start automatically as soon as you call an `async` function, there's no `StartCoroutine()` equivalent for tasks.
+* Tasks are not tied to a `GameObject` the way that coroutines are, and will continue to run even if the the object that spawned them is destroyed.
+
+For starting tasks, this change is convenient and removes some of the confusion that made coroutines difficult to work with (e.g. I've seen many people not call `StartCoroutine()` and then be confused why their coroutine wasn't running).
+
+By default, a task will end automatically once it runs to completion. However, if you want to be able to cancel a task before it completes you'll need to [use a `CancellationToken`](https://docs.microsoft.com/en-us/dotnet/standard/parallel-programming/how-to-cancel-a-task-and-its-children):
+
+
+
+### Cancel Task When Game Object is Destroyed
+
+For example, imagine a scenario where you want to load a sprite from an asset bundle and assign it to a sprite renderer on a game object. If the game object is destroyed while waiting for the asset to load, the subsequent attempt to update the sprite renderer will throw an exception:
+
+```c#
+var sprite = await assetBundle.LoadAssetAsync<Sprite>();
+
+// This will throw an exception of the game object was
+// destroyed while waiting for the sprite to load.
+spriteRenderer.sprite = sprite;
+```
+
+To cancel the task in the case that the game object is destroyed, you can use a `CancellationTokenSource` and the `RegisterRaiseCancelOnDestroy()` extension method:
+
+```c#
+var cancellation = new CancellationTokenSource();
+cancellation.RegisterRaiseCancelOnDestroy(this);
+
+// This await will never resume if the game object
+// is destroyed.
+var sprite = await assetBundle
+    .LoadAssetAsync<Sprite>()
+    .ConfigureAwait(cancellationToken: cancellation.Token);
+spriteRenderer.sprite = sprite;
+```
+
+
+
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
 [^sub-frame-await]: In theory, it would be possible to resume a task within the same frame by having it resume at a later part of the update loop, e.g. `await` during the main update and then resume during `LateUpdate`. However, this is probably not currently supported by UniTask and would probably not be something that is generally useful.
