@@ -206,7 +206,26 @@ Calling this as `await ThrowRecursive(3)` shows the following in the console:
 
 You can see the full stack of calls, from the top-level function that called `ThrowRecursive()` down through the multiple `await` statements. This also applies to any call stacks generated, including the ones included in debug logging. This makes debugging with async/await far easier than with coroutines.
 
+## Compatibility with Coroutines
+
+UniTask provides functionality for awaiting a coroutine within tasks and for yielding on tasks within coroutines. Using `await` with an `IEnumerator` an `AsyncOperation` or a `YieldInstruction` will work without issue. If you want to include a cancellation token or otherwise configure how the task will wait for the coroutine, you can use the `ConfigureAwait()` helper method:
+
+```c#
+await Resources.Load("MyAsset").ConfigureAwait(cancellationToken: token);
+```
+
+To `yield return` a `Task` or `UniTask` you must use the `ToCoroutine()` extension method:
+
+```c#
+yield return MyTask().ToCoroutine();
+```
+
+## Debugging
+
+When debugging with Visual Studio, you can step over `await` statements in the debugger and it will step to the next line![^step-over-await-crash] This is because tasks are a first-class part of the language, so the debugger is able to track them directly and better determine when to break in the debugger. Coroutines, on the other hand, aren't really a part of the language and are a hacky misuse of [C# iterators](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/yield), and so the debugger can't "see through" them the way it can with tasks.
+
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
 [^sub-frame-await]: In theory, it would be possible to resume a task within the same frame by having it resume at a later part of the update loop, e.g. `await` during the main update and then resume during `LateUpdate`. However, this is probably not currently supported by UniTask and would probably not be something that is generally useful.
+[^step-over-await-crash]: There's [currently a bug](https://github.com/Cysharp/UniTask/issues/41) with the Unity editor and `UniTask` that is causing the editor to crash when stepping over `await` in an `async UniTask` function. This shouldn't be an issue if you're using `async Task`, though.
 
