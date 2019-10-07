@@ -4,6 +4,10 @@ title: "Using async/await in Unity"
 permalink: /posts/unity-async/
 ---
 
+I've been investigating the usage of [C#'s async/await functionality](https://docs.microsoft.com/en-us/dotnet/csharp/async) in Unity projects, and in doing so I've done a number of experiments to determine the nuances of how it works in specific cases[^coroutines-are-bad]. This post attempts to list out and demonstrate these details so that others can better determine if using async/await makes sense for their Unity project.
+
+All of these tests were done with Unity 2019.2.4f1. I can't guarantee that everything will behave the same on other versions of Unity, and the async/await support was known to be buggy in the 2017/2018 release cycles.
+
 A major caveat here: Some of the details highlighted are general details about task-based async code in C#, but some details are specific to how [UniTask][unitask] implements task support for Unity. If you choose to use a different implementation of tasks (or not use a custom task implementation at all), some of these details may be wrong.
 
 ## No Minimum Delay
@@ -226,6 +230,7 @@ When debugging with Visual Studio, you can step over `await` statements in the d
 
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
+[^coroutines-are-bad]: Years of experience with coroutines and their *nuances* have made me very wary of all the ways that Unity can surprise you when it comes to async code.
 [^sub-frame-await]: In theory, it would be possible to resume a task within the same frame by having it resume at a later part of the update loop, e.g. `await` during the main update and then resume during `LateUpdate`. However, this is probably not currently supported by UniTask and would probably not be something that is generally useful.
 [^step-over-await-crash]: There's [currently a bug](https://github.com/Cysharp/UniTask/issues/41) with the Unity editor and `UniTask` that is causing the editor to crash when stepping over `await` in an `async UniTask` function. This shouldn't be an issue if you're using `async Task`, though.
 
