@@ -69,7 +69,7 @@ Debug.Log("After coroutine");
 // Before coroutine
 // Beginning of MyCoroutine()
 // After coroutine
-// "End of MyCoroutine()"
+// End of MyCoroutine()
 ```
 
 Tasks work the same way, synchronously executing up to the first `await` before returning to the calling code:
@@ -206,7 +206,7 @@ private async Task ThrowRecursive(int depth)
 
 Calling this as `await ThrowRecursive(3)` shows the following in the console:
 
-![Inputs and outputs between modules in the SpatialOS inspector](../assets/unity-async-exception-log.png)
+![Exception stack trace showing up in the Unity editor logs.](../../assets/unity-async-exception-log.png)
 
 You can see the full stack of calls, from the top-level function that called `ThrowRecursive()` down through the multiple `await` statements. This also applies to any call stacks generated, including the ones included in debug logging. This makes debugging with async/await far easier than with coroutines.
 

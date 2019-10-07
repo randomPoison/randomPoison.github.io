@@ -24,7 +24,7 @@ This is also the provided scene view in Unity (in the Hierarchy view) and Unreal
 
 The Query Editor itself doesn't actually show the results of the query, though. Instead, the query's output is piped into one or more other modules that are used to visualize the entity data. This highlights the next big thing that the SpatialOS inspector does well: It builds upon a modular set of tools that can be composed by piping the output of one module into another.
 
-![Inputs and outputs between modules in the SpatialOS inspector](../assets/spatialos-inspector-input-output.png)
+![Inputs and outputs between modules in the SpatialOS inspector](../../assets/spatialos-inspector-input-output.png)
 
 This is brilliant for two reasons:
 
