@@ -180,6 +180,32 @@ catch (OperationCancelledException)
 }
 ```
 
+## Exceptions and Callstacks
+
+With coroutines, each one behaves as its own top-level "stack", meaning that callstacks from within a coroutine don't show where the coroutine was spawned from. This also applies to exceptions, which don't unwind through a hierarchy of coroutines, making exceptions thrown in coroutines non-intuitive. This makes debugging errors in coroutines often very difficult, as you lose all context for logging and exceptions from within a coroutine. Tasks, on the other hand, are a first-class part of the language and so handle these cases much better.
+
+Exceptions behave the same as with synchronous code, unwinding the stack through tasks and providing a trace of the path it followed. For example:
+
+```c#
+private async Task ThrowRecursive(int depth)
+{
+    if (depth == 0)
+    {
+        throw new Exception("Exception thrown from deep in the call stack");
+    }
+    else
+    {
+        await ThrowRecursive(depth - 1);
+    }
+}
+```
+
+Calling this as `await ThrowRecursive(3)` shows the following in the console:
+
+![Inputs and outputs between modules in the SpatialOS inspector](../assets/unity-async-exception-log.png)
+
+You can see the full stack of calls, from the top-level function that called `ThrowRecursive()` down through the multiple `await` statements. This also applies to any call stacks generated, including the ones included in debug logging. This makes debugging with async/await far easier than with coroutines.
+
 [unitask]: https://github.com/Cysharp/UniTask	"The UniTask package for Unity"
 
 [^sub-frame-await]: In theory, it would be possible to resume a task within the same frame by having it resume at a later part of the update loop, e.g. `await` during the main update and then resume during `LateUpdate`. However, this is probably not currently supported by UniTask and would probably not be something that is generally useful.
