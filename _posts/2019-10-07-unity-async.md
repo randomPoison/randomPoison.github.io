@@ -6,7 +6,7 @@ permalink: /posts/unity-async/
 
 I've been investigating the usage of [C#'s async/await functionality](https://docs.microsoft.com/en-us/dotnet/csharp/async) in Unity projects, and in doing so I've done a number of experiments to determine the nuances of how it works in specific cases[^coroutines-are-bad]. This post attempts to list out and demonstrate these details so that others can better determine if using async/await makes sense for their Unity project.
 
-All of these tests were done with Unity 2019.2.4f1. I can't guarantee that everything will behave the same on other versions of Unity, and the async/await support was known to be buggy in the 2017/2018 release cycles.
+All of these tests were done with Unity 2019.2.4f1. I can't guarantee that everything will behave the same on other versions of Unity, and the async/await support was known to be buggy in the 2017/2018 release cycles. You can view the various test scripts I wrote [on GitHub](https://github.com/randomPoison/unity-tests-and-examples/tree/async-await-examples/Assets/Scripts/AsyncTests).
 
 A major caveat here: Some of the details highlighted are general details about task-based async code in C#, but some details are specific to how [UniTask][unitask] implements task support for Unity. If you choose to use a different implementation of tasks (or not use a custom task implementation at all), some of these details may be wrong.
 
