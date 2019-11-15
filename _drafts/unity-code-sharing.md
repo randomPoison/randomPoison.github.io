@@ -12,6 +12,8 @@ I have broken this post up into two parts: A direct description of the technical
 
 You can have a look at the [DotNetGamePrototype](https://github.com/randomPoison/DotNetGamePrototype) repository to see the example project used for testing.
 
+> TODO: Clarify that this is talking about using a Unity front end with a non-Unity back end.
+
 # Part One: Technical Issues
 
 At the most basic level, most C# code will be source-compatible between a Unity project and a standalone .NET C# project. That is, if you copy-and-paste the source code from one to the other, it will almost certainly compile and run as expected. There are a few caveats to this, though:
@@ -47,7 +49,40 @@ If you want to avoid polluting your shared codebase with Unity-specific configur
 > * Need to figure out out to setup the output paths correctly.
 > * Is it possible to split out the generated documentation XML?
 
-## Incompatible Dependencies
+## Incompatible Dependency Management
+
+The above approaches work well when your shared code only depends on the .NET Standard, but things quickly begin to break down when you introduce additional dependencies. This could mean adding a Nuget package as a dependency, adding a dependency on a UPM package, or even just adding another internal shared package that is also referenced by the first shared package.
+
+The key issue is that Unity uses a different dependency management system than the rest of the C# ecosystem. While the .NET ecosystem at large uses [NuGet](https://docs.microsoft.com/en-us/nuget/what-is-nuget), Unity has historically had no proper package management system, opting to manually copy source code (or sometimes pre-built DLLs) directly into each project. Starting with the 2018.3 release Unity has introduced their own [Unity Package Manager](https://docs.unity3d.com/Manual/Packages.html) as a more robust solution for dependency management.
+
+While UPM is a massive improvement over the previous (non-)solution, it doesn't support loading NuGet packages, making interop between the two ecosystems difficult. Unless you're willing to forego using any code outside of the .NET Standard, you'll want to be able to add dependencies to your shared package via NuGet. Once you do, though, you'll have a hard time getting your code to still work in Unity.
+
+If you're taking the shared package approach described above, Unity won't pull down your NuGet dependencies and your code won't compile. There are a couple of community-made tools for pulling down NuGet packages (such as [UnityNuGet](https://github.com/xoofx/UnityNuGet) and [NuGetForUnity](https://github.com/GlitchEnzo/NuGetForUnity)), but it is unclear if any solution is robust enough to be a reliable solution for projects looking to pull in NuGet packages.
+
+On the other hand, building your code as a DLL to import into Unity also has problems. The way dependencies are handled with building a .NET library (in C# or otherwise) is to *not* include dependencies in the built DLL. Instead, you're expected to have as part of your deployment process a way of providing those dependencies to the runtime when running your final executable. For most .NET applications, this is just handled by C# and the .NET development toolchain. The best solution I've found for this so far is to use the `<CopyLocalLockFileAssemblies>` element in your `.csproj`, making the DLLs for all dependencies immediately available alongside the DLL for your project:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SomePackage" Version="1.2.3" />
+  </ItemGroup>
+</Project>
+```
+
+From there, it's relatively easy to have your built DLL and all of its dependencies added to your Unity project:
+
+```
+dotnet publish -c Release -o ..\UnityProject\Packages\my-package
+```
+
+While this seems to work well if you have a single locally-maintained C# package that you're importing into Unity project, it doesn't scale up to a more complex project setup. For example, if you were two have to different projects both depending on `SomePackage`, each one would pull a copy of `SomePackage.dll` into your Unity project and your project will fail to build due to the duplicate DLLs. There are ways to work around this if there are only a few conflicts, but it's not clear if any such solution would scale well with a large tree of dependencies.
+
+## Incompatible Software Ecosystems
 
 
 
