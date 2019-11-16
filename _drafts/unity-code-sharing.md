@@ -86,7 +86,11 @@ While this seems to work well if you have a single locally-maintained C# package
 
 While the above solution works to get dependencies exported into a Unity project, there are deeper incompatibilities to contend with once you've gotten to that point. As noted previously, Unity only supports a subset of valid C#/.NET code on all platforms. At the most basic, you'll only be able to use NuGet packages that support .NET Standard 2.0, which not all packages do. Fortunately, it should be possible to avoid including such packages in the first place by specifying `netstandard2.0` as the target framework in your shared package's `.csproj`.
 
-Things get more tricky when dealing with the restrictions imposed by IL2CPP and the other platform-specific restrictions that Unity projects need to deal with.
+Things get more tricky when dealing with the restrictions imposed by IL2CPP and the other platform-specific restrictions that Unity projects need to deal with. According to [Unity's documentation](https://docs.unity3d.com/Manual/ScriptingRestrictions.html), there are a number of things things that are perfectly valid in regular .NET development that will fail in Unity projects built with IL2CPP:
+
+* The contents of `System.Reflection.Emit` are explicitly not supported on platforms that do not support just-in-time compilation. iOS is the prime example of this, though as I understand it some consoles also have this restriction.
+* The compiler will aggressively remove any code that is never referenced (i.e. a class that is never instantiated). This interacts badly with reflection-based serialization, where a given class may only ever be instantiated via reflection. In this case you can [manually tell the compiler to not strip a class](https://docs.unity3d.com/Manual/IL2CPP-BytecodeStripping.html), but that can be difficult to do if the missing class is hidden in the internals of a pre-compiled DLL.
+* Generic virtual methods also interact badly with ahead-of-time compilation.
 
 # Part Two: Assessment
 
