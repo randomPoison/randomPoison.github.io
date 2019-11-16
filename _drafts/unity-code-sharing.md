@@ -84,7 +84,10 @@ While this seems to work well if you have a single locally-maintained C# package
 
 ## Incompatible Software Ecosystems
 
+While the above solution works to get dependencies exported into a Unity project, there are deeper incompatibilities to contend with once you've gotten to that point. As noted previously, Unity only supports a subset of valid C#/.NET code on all platforms. At the most basic, you'll only be able to use NuGet packages that support .NET Standard 2.0, which not all packages do. Fortunately, it should be possible to avoid including such packages in the first place by specifying `netstandard2.0` as the target framework in your shared package's `.csproj`.
 
+Things get more tricky when dealing with the restrictions imposed by IL2CPP and the other platform-specific restrictions that Unity projects need to deal with.
 
 # Part Two: Assessment
 
+> Coming ~~soon~~ eventually!
