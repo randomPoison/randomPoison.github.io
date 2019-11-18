@@ -90,7 +90,18 @@ Things get more tricky when dealing with the restrictions imposed by IL2CPP and 
 
 * The contents of `System.Reflection.Emit` are explicitly not supported on platforms that do not support just-in-time compilation. iOS is the prime example of this, though as I understand it some consoles also have this restriction.
 * The compiler will aggressively remove any code that is never referenced (i.e. a class that is never instantiated). This interacts badly with reflection-based serialization, where a given class may only ever be instantiated via reflection. In this case you can [manually tell the compiler to not strip a class](https://docs.unity3d.com/Manual/IL2CPP-BytecodeStripping.html), but that can be difficult to do if the missing class is hidden in the internals of a pre-compiled DLL.
-* Generic virtual methods also interact badly with ahead-of-time compilation.
+* Generic virtual methods also interact badly with ahead-of-time compilation. There are [hacky workarounds](https://docs.unity3d.com/Manual/ScriptingRestrictions.html) for dealing with this when you know all of the concrete instantiations, but this can again be difficult when the specifics are hidden in a pre-compiled DLL that you're pulling in from a dependency.
+
+Additionally, there are platform-specific restrictions unique to the set of platforms supported by Unity that don't get taken into account by most (or any) packages published to NuGet. Especially, when publishing to the web you'll run into various restrictions that no other .NET environment has to deal with:
+
+* Not all platforms support threads, so any code that relies on threads will fail at runtime.
+* System resources don't behave the same on all platforms. On the web, browser sandboxing means that very few system resources are accessible at all. In some cases Unity can fake these for you (as is the case with how Unity fakes the existence of a file system), in other cases those APIs will simply fail at runtime. On mobile and console platforms, you have only limited access to the file system, so a library that attempts to create files in the background (e.g. as a data cache) may fail unexpectedly.
+
+In my limited experimentation, I have already run into a couple of cases where these limitations come up: The [Json.NET](https://www.newtonsoft.com/json) library and WebSocket handling.
+
+Json.NET is [by far the most widely used NuGet package](https://www.nuget.org/stats), and is the de facto standard for JSON serialization in C# and the .NET ecosystem. It also [doesn't work with Unity](https://github.com/JamesNK/Newtonsoft.Json/issues/1440). There are [multiple](https://github.com/jilleJr/Newtonsoft.Json-for-Unity) [ports](https://assetstore.unity.com/packages/tools/input-management/json-net-for-unity-11347) [out there](https://github.com/SaladLab/Json.Net.Unity3D) in various states of abandonment or disrepair, but none of them are available via NuGet so they can't be shared with a non-Unity C# library. In order to use Json.NET in your shared code, you have to setup a system where it is pulled in via NuGet when used in your server code, and then pulled in by a different method in your Unity project. This is doable, but if you use the setup described above to pull NuGet dependencies into your Unity project automatically you're going to run into conflicts fast. This could be possibly be fixed if the upstream library were setup to better support Unity, but there's been no indication that the maintainer is interested in taking on that work. This solution also only works because Json.NET is popular enough to have community-maintained forks that work with Unity, you likely won't have the same luck with smaller libraries.
+
+In the case of WebSockets, it's actually *impossible* to provide a NuGet package that supports Unity.
 
 # Part Two: Assessment
 
