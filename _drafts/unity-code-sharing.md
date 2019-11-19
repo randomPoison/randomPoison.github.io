@@ -4,15 +4,17 @@ title: "Sharing C# Code with Unity"
 permalink: /posts/sharing-with-unity/
 ---
 
-I've been doing some investigation into building client/server game architectures with Unity on the front end and a C# server on the back end. One of the major advantages of using the same programming language for both client and server would be the ability to share common game logic between the two, making it easier to have the client predict the outcome of events without having to duplicate logic.
+I've been doing some investigation into building client/server game architectures with Unity on the front end and a C# server on the back end, specifically pairing an [ASP.NET](https://dotnet.microsoft.com/apps/aspnet) server in a traditional .NET environment with a Unity front-end. For games with no realtime gameplay and a desire for high scalability, as is often the case with online mobile games (my industry, for better or worse), it makes sense to build your server with something other than Unity. Traditional .NET development is attractive in this case because it allows you to use the same programming language, C#, to build both your client and server.
 
-Unfortunately, what I have found in doing so is that the Unity ecosystem is so divorced from the main C# ecosystem that sharing code in any meaningful way is difficult, if not entirely impossible.
+In particular, one of the major advantages of using the same programming language for both client and server would be the ability to share common game logic between the two. Doing so has major advantages over having the two codebases be completely isolated:
 
-I have broken this post up into two parts: A direct description of the technical issues that come with sharing code, and then a more subjective evaluation of how this impacts any projects that want to take this approach.
+* Shared definitions for data objects and serialization logic greatly simplifies communication between client and server, reducing errors while making it easier to evolve your API contract.
+* Sharing common game logic means that you can do client-side prediction and keep your game experience smooth in the face of a slow network connection. This is useful even for non-realtime games!
+* Generally reduced development time, since logic written for the server can be reused in the client (and vice versa).
 
-You can have a look at the [DotNetGamePrototype](https://github.com/randomPoison/DotNetGamePrototype) repository to see the example project used for testing.
+You can have a look at the [DotNetGamePrototype](https://github.com/randomPoison/DotNetGamePrototype) repository to see the example project I've been building as part of this investigation.
 
-> TODO: Clarify that this is talking about using a Unity front end with a non-Unity back end.
+I have broken this post up into two parts: A direct description of the technical issues that come with sharing code, along with potential ways to deal with these issues, and then a more subjective evaluation of how this impacts any projects that want to take this approach.
 
 # Part One: Technical Issues
 
