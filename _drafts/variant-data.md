@@ -58,6 +58,76 @@ For the first question, we'll be looking at C# and PHP for the client and server
 
 # Part I: JSON
 
+Before we dig into the nuances of how to represent this data in different programming languages, let's look at how we can represent a list of rewards in a language-independent way by encoding it in JSON. Both our client and server code ultimately needs to understand this JSON format, so it should be informative to the subsequent discussions.
+
+The dead simplest approach would be to make a list of objects, with each object containing the fields needed for each item:
+
+```json
+[
+  { "quantity": 100 },
+  { "quantity": 5 },
+  { "id": 123 },
+  {
+    "id": 111,
+    "durability": 1000
+  }
+]
+```
+
+While this setup contains all of the necessary data for our rewards, we can quickly identify a couple of problems with this approach:
+
+* ⭐ Stars and 💎 Gems are exactly the same in the JSON! That means we can't reliably distinguish between the two, and so the client may display 💎 when the player was in fact awarded ⭐.
+* In order to distinguish between a 🧙 Hero and an 🛡️ Equipment we need to check for the presence of the `durability` field. While this is simple to do now, it will quickly become tedious and error-prone if we end up adding more item types in the future.
+
+The best way to disambiguate the rewards is to **tag each reward with its type**. For example:
+
+```json
+[
+  { "type": "stars", "quantity": 100 },
+  { "type": "gems", "quantity": 5 }
+]
+```
+
+Doing this allows us to quickly identify what item is being awarded for each item in the rewards list. For JSON specifically, there are at least three different ways we can tag our data:
+
+* **Internal tagging**, where the tag is done as a field within the object:
+
+  ```json
+  {
+    "type": "stars",
+    "quantity": 100
+  }
+  ```
+
+  This format is the cleanest in terms of readability (as long as you can guarantee that the tag field will always be listed first), but has the drawback that the data itself cannot contain a field with the same name used for the tag field. It's also worth noting that this approach won't work if your data wasn't already represented as a JSON object (e.g. if the data was a string then there's nowhere to add the tag field).
+
+* **Adjacent tagging**, where the tag and data are adjacent fields within a containing object:
+
+  ```json
+  {
+    "tag": "stars",
+    "data": {
+      "quantity": 100
+    }
+  }
+  ```
+
+  This approach avoids the issue of conflicting field names and will work for any kind of data (not just objects, as with internal tagging) at the cost of greater verbosity.
+
+* **External tagging**, where the tag is the key a container object:
+
+  ```json
+  {
+    "stars": {
+      "quantity": 100
+    }
+  }
+  ```
+
+  The main advantage of this approach is that it can enable more efficient deserialization logic as the deserialization code can always determine the expected "type" of the data before reading any of the data itself, however it is arguably the most awkward syntax from a human-readability perspective.
+
+All of these approaches are valid and will solve the issue of ambiguity in your data. In practice which approach you choose will come down to how important human-readability is to you and what approaches are best supported by the serialization systems used in your applications.
+
 # Interlude: Rust
 
 # Part II: C#
