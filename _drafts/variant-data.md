@@ -136,7 +136,67 @@ Before we start looking at how to handle this data in our target programming lan
 * **Correctness** - When working with variant data in code, does the system catch invalid usage of variant data (e.g. trying to get the `durability` field of a ⭐ Stars reward)?
 * **Performance** - How much overhead is needed to represent variant data? Variant data almost always has some addition costs as compared to non-variant data, but different approaches will have different performance characteristics.
 
-# Part II: C#
+My personal goal is to find solution that best enforces correctness/robustness while minimizing performance overhead, and the examples I bring up throughout this post will generally trend in the direction of finding more tools to enforce correctness. Where possible I try to bring up opportunities for make different trade offs, or at least point out where further pursuing correctness would have diminishing returns.
+
+It's also worth noting up front that often times it's possible to side step needing to handle variant data at all. For example, for our example case of dealing with rewards, we could in theory not put all of our rewards in a single list. Instead, we could make each reward type its own field/list, such that each item in the list is always of a known type:
+
+```json
+{
+  "stars": 100,
+  "heroes": [
+      { "id": 123 },
+      { "id": 234 }
+  ],
+  "equipment": [
+      { "id": 111, "durability": 70 },
+      { "id": 707, "durability": 100 }
+  ]
+}
+```
+
+This completely sidesteps the need to differentiate between different types of reward, since each field only ever contains a reward of a single type!
+
+This is absolutely a reasonable approach, and it may well be a better solution for your use case than dealing with variant data. However, sometimes this simply isn't an option for what you're trying to do, sometimes you specifically need to have different types of data/object in a single collection. My goal here is to explore what patterns can be applied to make make it easier to work with variant data, however I'll have to leave it up to you to decide if doing so is necessary for your purposes.
+
+# Part II: JavaScript (and dynamic languages in general)
+
+The nice thing about implementing this in JavaScript is that we can represent the data in memory identically to how we define the JSON. The bad thing about implementing this in JavaScript is that that's the only nice thing.
+
+Or, phrased with less snark: For highly dynamic languages, we have both the gift and the curse of having no type system to worry about when dealing with variant data. This means that it's very easy for us to jam heterogenous data into a collection and start working with it immediately, but unfortunately means that you often don't have much support at the language-level for handling that data in a robust way. I'm going to be looking at JavaScript specifically because it's widely used (and it's the only dynamic language that I know fairly well), but a lot of these solutions will apply to other dynamic languages.
+
+Since JSON is (deliberately) so similar to JS types, it's very easy to translate one of the tagging solutions described above directly. By `switch`ing on the `type` field, we can iterate over a list of rewards and handle each reward based on its type. For example, using the internal tagging example from before:
+
+```js
+let rewards = [
+    { "type": "stars", "quantity": 100 },
+    { "type": "gems", "quantity": 5 },
+];
+
+for (const reward of rewards) {
+    switch (reward.type)
+    {
+        case "stars":
+            console.log("Got some stars: ", reward.quantity);
+            break;
+
+        case "gems":
+            console.log("Got some gems: ", reward.quantity);
+            break;
+    }
+}
+```
+
+This solution is fairly straightforward and will work basically the same way for any of the tagging styles shown in the previous section. However, when we look at the criteria I laid out above it leaves a lot to be desired:
+
+- There's nothing in the language to help you correctly handle all possible variants when `switch`ing on the variant tag. You have to remember to list them all, or your code will silently ignore some of your elements.
+- There's nothing preventing you from accessing invalid fields on the variant (or fields from the wrong variant) even after you've checked the tag.
+- If you're using `JSON.parse()`, there's nothing to prevent your code from loading invalid or malformed data. This is generally true with `JSON.parse()` (you'll need to use a separate JSON schema validator like [ajv](https://www.npmjs.com/package/ajv) to validate the data), but working with variant data exacerbates the issues that come with silently consuming invalid data: Unless you have a `default` case in every `switch` block where you check the variant tag, your code will always silently ignore invalid or unknown variants. This can lead to especially subtle bugs that can be difficult to diagnose.
+
+That being said, those limitations are arguably inherent to JavaScript (though they'll apply to most dynamic languages), and aren't specific to working with variant data: There's nothing stopping you from accessing invalid fields on non-variant data, either, for example. This means that our nice-and-simple approach is also probably about as good as it gets. There are plenty of ways that you could build more infrastructure around this in order to enforce correctness, but doing so adds a lot of overhead in the form of runtime checking. Doing so also goes against most idiomatic usage patterns for JavaScript, since JavaScript APIs often lean into the flexibility the language provides in order to be as permissive as possible, rather than trying to proactively reject invalid data.
+
+Ultimately, there's not much you need to do when dealing with variant types in a dynamic language. Make sure you structure your data with an explicit tag and you'll have everything you need to disambiguate objects of different types.
+
+# Part III: C# (with a guest appearance from TypeScript)
 
 In C#, the obvious way to represent variant data like this is with an enum:
 
@@ -220,10 +280,6 @@ This approach has a number of advantages over using a single, combined class for
 * Performance-wise there's a bit of extra overhead that comes with downcasting, but it also saves a bit of heap space by reducing the size of each allocated reward object.
 
 The main drawback to this approach that I've seen is that it complicates deserialization. When deserializing a collection of variant data, the deserialization code needs to be able to determine which concrete class to instantiate based on the data. While the data is unambiguous and contains all the information we need in order to do this thanks the handy-dandy tag we added, the serialization logic may not know how to find the correct class based on the tag. For example, [this article discusses how to get Json.NET to handle this kind of data](https://skrift.io/articles/archive/bulletproof-interface-deserialization-in-jsonnet/). I won't explore how to handle deserialization in this article since it depends heavily on the serialization system you're using, but it's something you'll need to be aware of when implementing this pattern in your project.
-
-# Part III: PHP
-
-??????? ??? ? ??????  ?????????? ??? ?? ??????????? ??? ? ????????? ? ??  ???????? ?? ? ? ?? ????? ??? ????? ???????? ?? ???? ??? ??? ??? ?????? ??????? ? ?? ????? ????? ????? ?????? ????? ? ?? ??????? ????? ??????? ???? ? ?? ? ? ? ? ?????? ???????? ?????? ?????????? ?????????? ?? ?? ?? ??? ? ???? ????? ?? ? ????? ???? ?? ?? ?? ? ?????? ??? ?? ????? ????? ?? ??? ?? ????? ???? ???? ?? ???? ??? ????? ???? ? ???? ???? ? ???? ? ?? ???? ????? ????? ????? ???? ? ??? ??? ????? ??????? ???? ?? ???? ???? ?? 
 
 # Epilogue: Rust
 
