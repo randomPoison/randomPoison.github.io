@@ -283,20 +283,32 @@ The main drawback to this approach that I've seen is that it complicates deseria
 
 # Epilogue: Rust
 
-Before we start looking at how to handle this in any of the programming languages that I actually use professionally, I'm going to take a (somewhat) brief look at how this would be handled in the [Rust programming language](https://www.rust-lang.org/). I'm specifically looking at Rust here because this happens to be a case that Rust has very strong support for this sort of case, providing strong guarantees about how variant data is handled that we will try to emulate as much is possible in our other target languages.
+If you're curious about how we could further pursue correctness in handling variant data, we can take a look at how this would be handled in the [Rust programming language](https://www.rust-lang.org/). If you're not familiar, Rust is a relatively new programming language that combines a very strong, expressive type system with the ability to write abstractions with very little performance overhead. This includes first-class support for the kind of variant types that we've been looking at!
 
-First, a brief introduction to [Rust's enums](https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html). Like many languages, Rust supports creating user-defined enumeration types that can be one of several user-defined values:
+First, a brief introduction to [Rust's enums](https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html). Like many languages, Rust supports creating user-defined enumeration types that can be one of several user-defined values. So for the following enum definition:
 
 ```rust
 pub enum MyEnum {
     Foo,
     Bar,
 }
-
-// You can create a value of `MyEnum::Foo` or `MyEnum::Bar`,
-// any other value is a compiler error.
-let my_enum = MyEnum::Foo;
 ```
+
+You can create a value of `MyEnum::Foo` or `MyEnum::Bar`, any other value for a variable of type `MyEnum` is a compiler error:
+
+````rust
+// Correct way to use `MyEnum`.
+let my_enum = MyEnum::Foo;
+
+// ERROR: Not a valid variant.
+let my_enum = MyEnum::NotReal;
+
+// ERROR: Arbitrary integers aren't valid values.
+let my_enum = 5;
+
+// ERROR: Integers can't be cast to the enum type.
+let my_enum = 5 as MyEnum;
+````
 
 Rust then has `match` blocks which behave similarly to `switch` blocks in other languages:
 
@@ -335,10 +347,11 @@ Instead, you need to match on the value and handle all of the possible variants.
 ```rust
 match reward {
     Reward::Stars { quantity } => println!("Awarding {} stars", quantity),
-    Reward::Gems { quantity } => println!("Awarding {} gems", quantity),
+    Reward::Gems { quantity } => rintln!("Awarding {} gems", quantity),
     Reward::Hero { id } => println!("Unlocking hero {}", id),
-    Reward::Equipment { id, durability } =>
-        println!("Awarding equipment {} with durability {}", id, durability),
+    Reward::Equipment { id, durability } => {
+        println!("Awarding equipment {} with durability {}", id, durability);
+    }
 }
 ```
 
@@ -346,8 +359,9 @@ This setup, in my opinion, is the ideal way of handling variant data in a progra
 
 * You're statically prevented from accessing the data in the reward until you've checked which type of reward it is, and you can only ever access the fields of the correct variant.
 * If you forget to handle any of the possible cases, you get a compiler error! This also means that if you later add a new reward type, the compiler will makes sure you go back and update all the places in the code base where you're already checking the type of a reward.
+* It's also very efficient: There's no allocation involved in creating an instance of `Reward`, and the size of `Reward` is equal to the size of its largest variant plus the size of the discriminant (which will rarely need to be larger than a single byte).
+* Rust's de facto serialization library [Serde](https://serde.rs/) automatically validates incoming data and rejects any data that can't be correctly represented at runtime. And because validation happens as part of deserialization, there's little-to-no performance overhead in doing so!
 
-It's also very efficient: There's no allocation involved in creating an instance of `Reward`, and the size of `Reward` is equal to the size of its largest variant plus the size of the discriminant (which will rarely need to be larger than a single byte).
+# Conclusion
 
-
-
+oh god i am not good at conclusion how did this get here
