@@ -389,3 +389,4 @@ Whew! That's a lot of words on a pretty minor data pattern. While I covered a lo
 * **Tag your variant data!** Don't do ad hoc variant detection by checking for the presence of different fields, as that can still fail if you have ambiguous variants.
 * **Take advantage of language features** to make your variant data safer to work with. If you have a type system, don't just jam all of your variants into a single type that has a bunch of uninitialized fields. If you're working with a more dynamic language, make sure to still use a tag at runtime!
 
+Once you start getting into the specifics of a single application, there's a lot more nuance you can get into in terms of how to best represent your data and when it's best to use variant data vs a different approach. But all of that discussion is out of the scope of this article, so I'll leave it at that!
