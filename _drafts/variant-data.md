@@ -380,7 +380,7 @@ This setup, in my opinion, is the ideal way of handling variant data at runtime.
 * It's also very efficient: There's no allocation involved in creating an instance of `Reward`, and the size of `Reward` is equal to the size of its largest variant plus the size of the discriminant (which will rarely need to be larger than a single byte).
 * Rust's de facto serialization library [Serde](https://serde.rs/) automatically validates incoming data and rejects any data that can't be correctly represented at runtime. And because validation happens as part of deserialization, there's little-to-no performance overhead in doing so!
 
-While not many people are using Rust in production, most functional programming languages support something similar (referred to as ["sum types", "algebraic data types"](https://en.wikipedia.org/wiki/Algebraic_data_type), or ["tagged unions"](https://en.wikipedia.org/wiki/Tagged_union)). If you're using such a language, you'll likely get similar results to what you'd get from using an `enum` in Rust!
+While not many people are using Rust in production, most functional programming languages support something similar (referred to as ["sum types", "algebraic data types", or "tagged unions"](https://en.wikipedia.org/wiki/Tagged_union)). If you're using such a language, you'll likely get similar results to what you'd get from using an `enum` in Rust!
 
 # Conclusion
 
