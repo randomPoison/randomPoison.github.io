@@ -262,8 +262,8 @@ public struct Equipment : IReward
     public readonly int Durability;
 }
 
-// And so on, with a different struct or class
-// for each reward type.
+// And so on, with a different struct
+// or class for each reward type.
 ```
 
 When working with an `IReward` object, you can take advantage of the pattern matching feature added in C# 7.0 to handle the reward based on its concrete type:
@@ -321,10 +321,12 @@ let my_enum = MyEnum::Foo;
 // ERROR: Not a valid variant.
 let my_enum = MyEnum::NotReal;
 
-// ERROR: Arbitrary integers aren't valid values.
+// ERROR: Arbitrary integers aren't
+// valid values.
 let my_enum = 5;
 
-// ERROR: Integers can't be cast to the enum type.
+// ERROR: Integers can't be cast to
+// the enum type.
 let my_enum = 5 as MyEnum;
 ````
 
@@ -357,18 +359,28 @@ When working with a value of an enum, you can't directly access any of the field
 let reward = Reward::Stars { quantity: 20 };
 
 // ERROR: No field `quantity` on type `Reward`.
-let quantity = reward.quantity.
+let quantity = reward.quantity;
 ```
 
 Instead, you need to match on the value and handle all of the possible variants. Only within the relevant match arm can you access the fields of any given variant:
 
 ```rust
 match reward {
-    Reward::Stars { quantity } => println!("Awarding {} stars", quantity),
-    Reward::Gems { quantity } => rintln!("Awarding {} gems", quantity),
-    Reward::Hero { id } => println!("Unlocking hero {}", id),
+    Reward::Stars { quantity } =>
+        println!("Awarding {} stars", quantity),
+
+    Reward::Gems { quantity } =>
+        println!("Awarding {} gems", quantity),
+
+    Reward::Hero { id } =>
+        println!("Unlocking hero {}", id),
+
     Reward::Equipment { id, durability } => {
-        println!("Awarding equipment {} with durability {}", id, durability);
+        println!(
+            "Awarding equipment {} with durability {}",
+            id,
+            durability,
+        );
     }
 }
 ```
