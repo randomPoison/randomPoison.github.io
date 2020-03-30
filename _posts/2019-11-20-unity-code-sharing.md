@@ -26,7 +26,7 @@ At the most basic level, most C# code will be source-compatible between a Unity 
 
 Meeting these requirements only enables a bare minimum of source compatibility, though. Once you have some C# code that you want to share between projects, you'll need some method of making that code available in both contexts. There are two main ways to share code between the projects:
 
-* **Define the shared code as both a UPM package and a standalone C# project** (i.e. add a `package.json` and a `.csproj` file to the directory) and then add the shared code as a direct dependency for both projects.[^text-sharing]
+* **Define the shared code as both a UPM package and a standalone C# project** (i.e. add a `package.json` and a `.csproj` file to the directory) and then add the shared code as a direct dependency for both projects.
 * **Only define the shared code as a standalone C# project**. Add it as a direct dependency to the server project, and add the built DLLs to Unity.
 
 ## Sharing Code Directly
