@@ -56,6 +56,10 @@ Here's the lightning tour of what's going on here:
 
 cs-bindgen has a very specific goal: Generate high-level, idiomatic C# wrappers for calling into Rust code. It specifically targets the use case of embedding Rust within a C# library or application (so it doesn't support calling arbitrary C# functions, for example). I want calling into Rust code to feel no different than calling into any other C# code.
 
+## Structs and Classes
+
+When exporting a struct to C#, there are two ways that data can be passed between Rust and C#. By default, exported Rust types are passed as "handles", which means that they're passed as opaque pointers to the C# side. When calling a method on the Rust type, the pointer is passed back to Rust so that the method can be called on the correct object. The corresponding C# class wraps the raw pointer and exposes any exported methods 
+
 ## Enums
 
 As much as possible, I try to preserve Rust's semantics while still exposing them in a way that makes sense for C#. For example, if you export a simple C-like enum:
@@ -147,3 +151,4 @@ switch (value)
         break;
 }
 ```
+
