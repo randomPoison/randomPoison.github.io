@@ -4,7 +4,9 @@ title: "The State of the Unity Package Ecosystem"
 permalink: /posts/the-state-of-unity-packages/
 ---
 
-> TODO: Do a good introduction here.
+I'm a Unity developer: Professionally I make mobile games with the Unity game engine. I've been working with Unity since 2014, and have seen the engine and the ecosystem around it change a lot over the years. I'm also an avid open source developer, and a big believer in the value of having a community-driven ecosystem around any core technology. Many times in my years working with Unity I've tried unsuccessfully to setup reusable, open source libraries for Unity in the way that I would for other ecosystems like JavaScript (via NPM) or Rust, failing inevitably due to some limitation in the tooling available for Unity. In the last year or so things have been changing a lot within the Unity ecosystem, and I'm finding that I'm finally able to do all of the things that I'm used to being able to do when setting up open source libraries.
+
+What follows is my attempt to recount the history of package management in Unity, along with the ways that Unity and its ecosystem have been changing recently to make authoring packages easier.
 
 # The Bad Old Days
 
@@ -20,11 +22,11 @@ Take, for example, JSON parsing. For a long time Unity didn't have built-in supp
 
 # A New Hope
 
-In the 2017.2 release Unity started [adding a new package manager](https://blogs.unity3d.com/2017/10/12/unity-2017-2-is-now-available/#wakkawakka), which [became available to users in the 2018.1 release](https://blogs.unity3d.com/2018/05/04/project-management-is-evolving-unity-package-manager-overview/). In its initial form, there wasn't official support for making custom packages (it was only being used to distribute Unity's own packages). However at least one clever person was able to [reverse engineer the package format](https://gist.github.com/LotteMakesStuff/6e02e0ea303030517a071a1c81eb016e), making it possible to start experimenting with the package manager early.
+In the 2017.2 release Unity started [adding a new package manager](https://blogs.unity3d.com/2017/10/12/unity-2017-2-is-now-available/#wakkawakka), which became available to users [in the 2018.1 release](https://blogs.unity3d.com/2018/05/04/project-management-is-evolving-unity-package-manager-overview/). In its initial form, there wasn't official support for making custom packages (it was only being used to distribute Unity's own packages). However at least one clever person was able to [reverse engineer the package format](https://gist.github.com/LotteMakesStuff/6e02e0ea303030517a071a1c81eb016e), making it possible to start experimenting with the package manager early.
 
-With the [2018.3 release](https://unity3d.com/unity/whats-new/unity-2018.3.0), Unity added official support for custom packages, as well as experimental support for distributing packages via Git and custom NPM servers. At this point the functionality was still largely undocumented, but was working well enough to start using in actual projects. Synapse has at least one project on Unity 2018.4 that relies on this functionality and has found that it worked well in practice.
+With the [2018.3 release](https://unity3d.com/unity/whats-new/unity-2018.3.0), Unity added official support for custom packages, as well as experimental support for distributing packages via Git and custom NPM servers. At this point the functionality was still largely undocumented, but was working well enough to start using in actual projects. Synapse has at least one project on Unity 2018.4 that relies on this functionality and has found that it works well in practice.
 
-Starting in 2019.1 Unity provided [official documentation for setting up custom packages](https://docs.unity3d.com/2019.1/Documentation/Manual/CustomPackages.html), and they've continued to flesh out the docs and improve on UPMs functionality throughout the 2019 release cycle. At this point, UPM provides enough functionality that building out an ecosystem of Unity packages is actual a viable prospect.
+Starting in 2019.1 Unity provided [official documentation for setting up custom packages](https://docs.unity3d.com/2019.1/Documentation/Manual/CustomPackages.html), and they've continued to flesh out the docs and improve on UPMs functionality throughout the 2019 release cycle. At this point, UPM provides enough functionality that building out an ecosystem of Unity packages is actually a viable prospect.
 
 Well, at least in theory. In practice there's still one major hiccup that needs to be addressed...
 
