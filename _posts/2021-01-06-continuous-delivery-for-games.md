@@ -4,33 +4,19 @@ title: "Continuous Delivery for the Discerning Game Developer"
 permalink: /posts/continuous-delivery-for-games/
 ---
 
-Continuous Delivery is a set of software development practices for automating the process of taken a change submitted to source control and making it ready for production. This means fully automating the process of building the product, testing it, and preparing the build for release. At a high level I'd summarize the goal of CD as "Any commit to trunk can go into production". Effectively what we want to end up with is this:
+Continuous Delivery is a set of software development practices for automating the process of taking a change submitted to source control and making it ready for production. This means fully automating the process of building the product, testing it, and preparing the build for release. At a high level I'd summarize the goal of CD as "Any commit to trunk can go into production". Effectively what we want to end up with is this:
 
-```flow
-commit=>start: Commit
-magic=>subroutine: ✨Magic Happens✨
-ready=>end: Ready for Production
+<object data="../../assets/magic.svg" type="image/svg+xml"></object>
 
-commit(right)->magic(right)->ready
-```
-
-If you're not used to working on a project that has a CD pipeline setup this can sound somewhat absurd, especially if you're used to the process of preparing a build for production taking days or weeks to complete. There's also a common perception in software development that software quality and stability come at a direct cost to development velocity, so the idea that investing heavily in things like test automation, which are generally perceived as efforts to increase quality and stability, can do anything but slow velocity can be unintuitive to many people. However, there's a large body of empirical evidence demonstrating that practices like CD improve both software stability *and* development velocity, as well as having beneficial knock-on effects like reducing employee burnout.
+If you're not used to working on a project that has a CD pipeline setup this can sound somewhat absurd, especially if you're used to the process of preparing a build for production taking days or weeks to complete. There's also a common perception in software development that software quality and stability come at a direct cost to development velocity, so the idea that investing heavily in things like test automation, which are generally perceived as efforts to increase quality and stability, can actually speed up development is unintuitive to many people. However, there's a large body of empirical evidence demonstrating that practices like CD improve both software stability *and* development velocity, as well as having beneficial knock-on effects like reducing employee burnout.
 
 I'm not going to be going further into the business case for CD here, but for anyone who's interested in seeing more of the details then I highly recommend checking out the Accelerate State of DevOps reports. The State of DevOps Report is an ongoing research study into how different software development practices (with an emphasis on DevOps) impact software delivery and operational performance. [The latest one is the 2019 report](https://services.google.com/fh/files/misc/state-of-devops-2019.pdf), and demonstrates a clear, causal link between practices like CD and SDO performance.
 
 Broadly speaking, a CD pipeline will have the following steps:
 
-```flow
-commit=>start: Commit
-integrate=>operation: Integrate Changes
-build=>operation: Build/Deploy
-test=>operation: Acceptance Tests
-release=>end: Ready for Production
+<object data="../../assets/overview.svg" type="image/svg+xml"></object>
 
-commit(right)->integrate(right)->build(right)->test(right)->release
-```
-
-I'm going to go through each of these stages and talk about what they require to be fully implemented, and what development practices can be used achieve success in those areas. I'm also going to touch on some additional topics that aren't _strictly_ a part of CD, but are part of the broader software development process and can be part of a positive feedback loop if handled well.
+I'm going to go through each of these stages and talk about what they require to be fully implemented, and what development practices can be used achieve success in those areas. I'm also going to touch on some additional topics that aren't _strictly_ a part of CD, but are part of the broader software development process and can be part of a positive feedback loop when combined with a robust CD pipeline.
 
 # Integrating Changes
 
@@ -40,7 +26,7 @@ For the most part this practice is standard these days; Even projects that don't
 
 When working on relatively small or scope-constrained pieces of work there's generally no issue following this practice. But things can be more complicated when working on something that's larger in scope, such as adding a major feature or doing some kind of large-scale refactoring. Even for teams that generally follow trunk-based development, it can be tempting to do large chunks of work on a branch before merging the work into trunk. In order for a CD pipeline to work effectively, it's important to avoid this and instead follow practices that allow even major changes to be broken down and merged into the mainline piecemeal.
 
-In short: Merging unfinished work is good, actually. We as developers often have an aversion to merging in partially-completed work, especially if what we're merging in is non-functional. However, the only real issue with merging incomplete work is if:
+In short: Merging unfinished work is good, actually! We as developers often have an aversion to merging in partially-completed work, especially if what we're merging in is non-functional. However, the only real issue with merging incomplete work is if:
 
 * It disrupts development in some way, e.g. by causing build or test failures, or by exposing unfinished work to internal testers.
 * It disrupts the end user in some way, by being surfaced to users before the work was finished.
@@ -60,7 +46,7 @@ The next step depends on what type of application you're working with and what t
 As with the integration step it's pretty common these days for this step to already be automated, at least at a basic level. So what I want to focus on here are the nuances that are important for ensuring that your CD pipeline is working effectively:
 
 * **The entire process needs to be automated** (short of actually releasing the build)!
-* **Run the entire process on every commit**!
+* **Run the entire process on every commit!**
 
 One of the driving philosophies of CD is "if something is painful, do it more often". While it's common to have a basic build process run on every commit, it's also common to only run the full release build pipeline when preparing to actually do a release. As a result, issues in the release build process don't get caught until the worst possible time: When you're trying to get a release out. Similarly, it's common to leave steps like uploading builds to release platforms as manual steps since they are performed infrequently, and the effort of automating them is seen as being more costly than continuing to do it by hand.
 
@@ -119,24 +105,6 @@ At Synapse we build games that are highly data-driven, and changes to the game's
 
 Games also have a much heavier emphasis on art assets than many other applications. Fortunately, art assets can be treated fairly similarly to data in terms of automated testing: While we can't do much to test that the assets look right, there's often specific requirements for how art assets are configured and added to the project, and _those_ parts can be tested automatically. With engineers, artists, and designers all potentially making tweaks to the project at the same time, it can be especially beneficial to have tests covering art assets and game data, since more people touching a project introduces more places for bugs to be introduced.
 
-## A Note on Manual QA
-
-Earlier I talked about the advantages of automated testing and the advantages it has over manual testing for certain kinds of testing. But I really want to be clear that automated testing is NOT a substitute for manual testing. Rather, automated testing allows your manual testers to work far more effectively than they could otherwise.
-
-On a project without automated testing, manual QA efforts are a constant uphill battle against breakage and regressions, and most of our testers' time is spent just making sure the game still works. This is a problem for a few reasons:
-
-* It's a huge time sink, since smoke testing and regression testing needs to be done nearly constantly as changes are made to the project.
-* Delays and disruptions are common, since bugs are constantly being introduced. This means that QA testers rarely have time to focus on other work like writing test plans.
-* Finalizing a release is difficult and stressful since bugs are often found last minute and there's a lot of pressure on the QA team to approve a build on time, something which is often entirely out of their control.
-
-Automated testing resolves these issues by handling the most rote, tedious forms of testing and establishing a baseline of stability. This removes a lot of the stress that comes from working on an unstable project, and frees testers up for the kinds of work that only manual testers can do:
-
-* **User experience testing**. QA testers can give feedback not just on whether or not something works, but how it's experienced from a player's perspective. This means they can identify if things are confusing from a player's perspective, or things that otherwise don't line up with how we want player's to experience the game.
-* **Exploratory testing**. Automated testing can ensure that old bugs never come back, but it's not really able to find new bugs. Manual testers know how to poke and prod at features in order to find ways to break them, and any bugs they uncover can get added to the automated regression testing suite in order to ensure that those bugs never come back.
-* **Designing test cases**. Manual QA can be included early in the design and implementation phases in order to ensure that edge cases and potential bugs are caught before they ever make it into the game. These efforts then translate directly into building out automated testing for any edge cases that QA identifies.
-
-The end result of all this is a more stable game, a better final product, and a much, much happier QA team.
-
 ## Verify Changes Before Merging
 
 One key point I haven't talked about yet is _when_ to run your automated test suite.
@@ -159,7 +127,24 @@ This brings us to the question of how we respond to failures in the CD pipeline.
 
 However, for tests that are run as a second stage or after merging, we have the possibility of failure for changes that have already been merged to trunk. In these cases, it's important make fixing trunk the top priority for the team. This doesn't mean that every person on the team has to stop what they're doing until the issue is fixed, but _someone_ needs to immediately focus on fixing it, and anyone else who's help is needed should prioritize helping. This is part of the reason why running tests before merging is so important: Failures that are caught before merging are far less disruptive than those caught after merging, so catching as many issues as possible as early as possible is key to keeping the development process smooth.
 
+## A Note on Manual QA
+
+Earlier I talked about the advantages of automated testing and the advantages it has over manual testing for certain kinds of testing. But I really want to be clear that automated testing is NOT a substitute for manual testing. Rather, automated testing allows your manual testers to work far more effectively than they could otherwise.
+
+On a project without automated testing, manual QA efforts are a constant uphill battle against breakage and regressions, and most of our testers' time is spent just making sure the game still works. This is a problem for a few reasons:
+
+* It's a huge time sink, since smoke testing and regression testing needs to be done nearly constantly as changes are made to the project.
+* Delays and disruptions are common, since bugs are constantly being introduced. This means that QA testers rarely have time to focus on other work like writing test plans.
+* Finalizing a release is difficult and stressful since bugs are often found last minute and there's a lot of pressure on the QA team to approve a build on time, something which is often entirely out of their control.
+
+Automated testing resolves these issues by handling the most rote, tedious forms of testing and establishing a baseline of stability. This removes a lot of the stress that comes from working on an unstable project, and frees testers up for the kinds of work that only manual testers can do:
+
+* **User experience testing**. QA testers can give feedback not just on whether or not something works, but how it's experienced from a player's perspective. This means they can identify if things are confusing from a player's perspective, or things that otherwise don't line up with how we want player's to experience the game.
+* **Exploratory testing**. Automated testing can ensure that old bugs never come back, but it's not really able to find new bugs. Manual testers know how to poke and prod at features in order to find ways to break them, and any bugs they uncover can get added to the automated regression testing suite in order to ensure that those bugs never come back.
+* **Designing test cases**. Manual QA can be included early in the design and implementation phases in order to ensure that edge cases and potential bugs are caught before they ever make it into the game. These efforts then translate directly into building out automated testing for any edge cases that QA identifies.
+
+The end result of all this is a more stable game, a better final product, and a much, much happier QA team.
+
 # Conclusion
 
-Wrap things up real good.
-
+There's far more information about Continuous Delivery than I can cover in this article, but I hope I've provided a reasonable high-level introduction to what a CD pipeline looks like and what work goes into building one. Continuous Delivery as a practice can provide an immense amount of value for a software development team, but it's sadly under-utilized within the game development world due to some of the unique challenges that game development projects need to contend with. I hope that more game devs begin to utilize this practice to ship higher quality games more quickly than they could otherwise.
